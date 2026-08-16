@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import type { Profile, Branch, Post, GossipPost, Confession, Teacher, EventItem, Club, Project, Achievement, MarketplaceListing, LostFoundItem, Builder, ChatRoom, ChatMessage, Notification, TeamRequest, Skill, Interest, HiddenProfile, TeacherReview, EventCommunityMessage, EventResource } from '@/types'
+import type { Profile, Branch, Post, GossipPost, Confession, Teacher, EventItem, Club, Project, Achievement, MarketplaceListing, LostFoundItem, Builder, ChatRoom, ChatMessage, Notification, TeamRequest, Skill, Interest, HiddenProfile, TeacherReview, EventVolunteer, EventCommunityMessage, EventResource } from '@/types'
 
 // ========================================
 // INPUT VALIDATION
@@ -948,7 +948,9 @@ export async function createEvent(
   registrationUrl?: string,
   instagramUrl?: string,
   whatsappUrl?: string,
+  whatsappGroupUrl?: string,
   contactNumber?: string,
+  organizingDepartment?: string,
 ) {
   const { data, error } = await supabase
     .from('events')
@@ -965,7 +967,9 @@ export async function createEvent(
       registration_url: registrationUrl || null,
       instagram_url: instagramUrl || null,
       whatsapp_url: whatsappUrl || null,
+      whatsapp_group_url: whatsappGroupUrl || null,
       contact_number: contactNumber || null,
+      organizing_department: organizingDepartment || null,
       created_by: createdBy,
     })
     .select()
@@ -1045,6 +1049,41 @@ export async function deleteEventResource(resourceId: string, uploaderId: string
   if (error) throw error
 }
 
+// === Event Volunteers ===
+export async function applyEventVolunteer(eventId: string, userId: string) {
+  const { data, error } = await supabase
+    .from('event_volunteers')
+    .insert({ event_id: eventId, user_id: userId })
+    .select()
+    .maybeSingle()
+  if (error) throw error
+  return data as EventVolunteer
+}
+
+export async function removeEventVolunteer(eventId: string, userId: string) {
+  const { error } = await supabase
+    .from('event_volunteers')
+    .delete()
+    .eq('event_id', eventId)
+    .eq('user_id', userId)
+  if (error) throw error
+}
+
+export async function fetchEventVolunteers(eventId: string) {
+  const { data, error } = await supabase
+    .from('event_volunteers')
+    .select('*, user:profiles!event_volunteers_user_id_fkey(*)')
+    .eq('event_id', eventId)
+    .order('created_at', { ascending: true })
+  if (error) throw error
+  return data as EventVolunteer[]
+}
+
+export async function fetchEventVolunteerIds(eventId: string) {
+  const { data } = await supabase.from('event_volunteers').select('user_id').eq('event_id', eventId)
+  return new Set(data?.map(d => d.user_id) || [])
+}
+
 // === Creator Rankings (by total post likes) ===
 export async function fetchCreatorRankings(branchId?: string, limit = 20) {
   const { data, error } = await supabase
@@ -1118,7 +1157,7 @@ export async function uploadItemImage(userId: string, file: File): Promise<strin
 
 // === Lost & Found ===
 export async function fetchLostFound(type?: string) {
-  let query = supabase.from('lost_found_items').select('*').order('created_at', { ascending: false })
+  let query = supabase.from('lost_found_items').select('*, owner:profiles!lost_found_items_owner_id_fkey(*)').order('created_at', { ascending: false })
   if (type && type !== 'all') query = query.eq('type', type)
   const { data, error } = await query
   if (error) throw error

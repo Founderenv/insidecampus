@@ -151,8 +151,18 @@ export interface EventItem {
   registration_url: string | null
   instagram_url: string | null
   whatsapp_url: string | null
+  whatsapp_group_url: string | null
   contact_number: string | null
+  organizing_department: string | null
   created_by: string | null
+}
+
+export interface EventVolunteer {
+  id: string
+  event_id: string
+  user_id: string
+  created_at: string
+  user?: Profile
 }
 
 export interface EventCommunityMessage {
@@ -277,6 +287,7 @@ export interface LostFoundItem {
   location: string | null
   item_date: string | null
   is_resolved: boolean
+  owner?: Profile
 }
 
 export interface Builder {

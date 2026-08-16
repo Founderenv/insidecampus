@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Search, Plus, MapPin, Calendar, Image as ImageIcon, X } from 'lucide-react'
+import { Search, Plus, MapPin, Calendar, Image as ImageIcon, X, Phone, MessageCircle } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { SkeletonList } from '@/components/Skeleton'
 import { EmptyState, ErrorState } from '@/components/States'
@@ -9,6 +9,18 @@ import { timeAgo } from '@/lib/utils'
 import type { LostFoundItem } from '@/types'
 
 const TYPE_FILTERS = ['All', 'Lost', 'Found'] as const
+
+function normalizeWhatsAppNumber(num: string): string {
+  const digits = num.replace(/\D/g, '')
+  if (digits.length === 10) return `91${digits}`
+  if (digits.length === 12 && digits.startsWith('91')) return digits
+  return digits
+}
+
+function openWhatsApp(phone: string, message: string) {
+  const normalized = normalizeWhatsAppNumber(phone)
+  window.open(`https://wa.me/${normalized}?text=${encodeURIComponent(message)}`, '_blank')
+}
 
 export function LostFound() {
   const { user } = useAuth()
@@ -211,6 +223,21 @@ export function LostFound() {
                       className="px-4 py-1.5 rounded-xl bg-ink-800 border border-ink-700 text-gray-300 text-xs font-medium hover:text-white transition-colors"
                     >
                       Mark as Resolved
+                    </button>
+                  </div>
+                )}
+
+                {user && !isOwner && !item.is_resolved && item.owner?.phone && (
+                  <div className="pt-1 flex gap-2">
+                    <button
+                      onClick={() => openWhatsApp(
+                        item.owner!.phone!,
+                        `Hi, I saw your "${item.type === 'lost' ? 'lost' : 'found'}" item "${item.item_name}" on InsideZeal. ${item.type === 'found' ? 'I lost this item and would like to get it back.' : 'I found this item and wanted to let you know.'}`
+                      )}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-500 text-white text-xs font-medium hover:bg-green-600 transition-colors"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      {item.type === 'lost' ? 'Contact Owner' : 'Contact Finder'}
                     </button>
                   </div>
                 )}

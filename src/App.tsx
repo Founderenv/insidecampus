@@ -77,6 +77,7 @@ function ProtectedRoutes() {
               <Route path="/teachers" element={<Teachers />} />
               <Route path="/teachers/:id" element={<TeacherDetail />} />
               <Route path="/events" element={<Events />} />
+              <Route path="/events/:id" element={<Events />} />
               <Route path="/chat" element={<Chat />} />
               <Route path="/messages" element={<Messages />} />
               <Route path="/match" element={<Match />} />
