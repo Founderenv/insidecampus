@@ -28,6 +28,7 @@ import { LostFound } from '@/pages/LostFound'
 import { Nearby } from '@/pages/Nearby'
 import { Builders } from '@/pages/Builders'
 import { Notifications } from '@/pages/Notifications'
+import { Requests } from '@/pages/Requests'
 import { Create } from '@/pages/Create'
 import { NotFound } from '@/pages/NotFound'
 import { PostDetail } from '@/pages/PostDetail'
@@ -94,6 +95,7 @@ function ProtectedRoutes() {
               <Route path="/nearby/l/:lid" element={<Nearby />} />
               <Route path="/builders" element={<Builders />} />
               <Route path="/notifications" element={<Notifications />} />
+              <Route path="/requests" element={<Requests />} />
               <Route path="/create" element={<Create />} />
               <Route path="/post/:id" element={<PostDetail />} />
               <Route path="/edit-profile" element={<EditProfile />} />

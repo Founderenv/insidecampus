@@ -1,26 +1,15 @@
 import { useEffect, useState } from 'react'
-import { Search, Plus, MapPin, Calendar, Image as ImageIcon, X, Phone, MessageCircle } from 'lucide-react'
+import { Search, Plus, MapPin, Calendar, Image as ImageIcon, X, MessageCircle } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { SkeletonList } from '@/components/Skeleton'
 import { EmptyState, ErrorState } from '@/components/States'
 import { Sheet } from '@/components/Sheet'
+import { ContactSheet } from '@/components/ContactSheet'
 import { fetchLostFound, createLostFoundItem, markLostFoundResolved, uploadItemImage, validateImageFile } from '@/lib/data'
 import { timeAgo } from '@/lib/utils'
 import type { LostFoundItem } from '@/types'
 
 const TYPE_FILTERS = ['All', 'Lost', 'Found'] as const
-
-function normalizeWhatsAppNumber(num: string): string {
-  const digits = num.replace(/\D/g, '')
-  if (digits.length === 10) return `91${digits}`
-  if (digits.length === 12 && digits.startsWith('91')) return digits
-  return digits
-}
-
-function openWhatsApp(phone: string, message: string) {
-  const normalized = normalizeWhatsAppNumber(phone)
-  window.open(`https://wa.me/${normalized}?text=${encodeURIComponent(message)}`, '_blank')
-}
 
 export function LostFound() {
   const { user } = useAuth()
@@ -30,6 +19,7 @@ export function LostFound() {
   const [typeFilter, setTypeFilter] = useState<string>('All')
   const [sheetOpen, setSheetOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [contactItem, setContactItem] = useState<LostFoundItem | null>(null)
 
   const [formType, setFormType] = useState<'lost' | 'found'>('lost')
   const [formName, setFormName] = useState('')
@@ -227,13 +217,10 @@ export function LostFound() {
                   </div>
                 )}
 
-                {user && !isOwner && !item.is_resolved && item.owner?.phone && (
+                {user && !isOwner && !item.is_resolved && (
                   <div className="pt-1 flex gap-2">
                     <button
-                      onClick={() => openWhatsApp(
-                        item.owner!.phone!,
-                        `Hi, I saw your "${item.type === 'lost' ? 'lost' : 'found'}" item "${item.item_name}" on InsideZeal. ${item.type === 'found' ? 'I lost this item and would like to get it back.' : 'I found this item and wanted to let you know.'}`
-                      )}
+                      onClick={() => setContactItem(item)}
                       className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-500 text-white text-xs font-medium hover:bg-green-600 transition-colors"
                     >
                       <MessageCircle className="w-3.5 h-3.5" />
@@ -336,6 +323,23 @@ export function LostFound() {
           </button>
         </div>
       </Sheet>
+
+      <ContactSheet
+        open={!!contactItem}
+        onClose={() => setContactItem(null)}
+        title={contactItem?.type === 'lost' ? 'Contact Owner' : 'Contact Finder'}
+        ownerId={contactItem?.owner_id || ''}
+        ownerName={contactItem?.owner?.full_name || (contactItem?.type === 'lost' ? 'Owner' : 'Finder')}
+        ownerAvatar={contactItem?.owner?.avatar_url || null}
+        itemName={contactItem?.item_name || ''}
+        whatsAppMessage={
+          contactItem?.type === 'lost'
+            ? `Hi, I saw your lost item post for ${contactItem?.item_name || ''} on InsideZeal. I may have information about it.`
+            : `Hi, I saw your found item post for ${contactItem?.item_name || ''} on InsideZeal. I think it may be mine.`
+        }
+        requestType="lost_found"
+        referenceId={contactItem?.id}
+      />
     </div>
   )
 }

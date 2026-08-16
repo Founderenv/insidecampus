@@ -36,11 +36,17 @@ function formatEventDate(dateStr: string): string {
 
 function formatEventTime(timeStr: string): string {
   if (!timeStr) return ''
-  const [h, m] = timeStr.split(':')
-  const hour = parseInt(h || '0')
-  const ampm = hour >= 12 ? 'PM' : 'AM'
-  const h12 = hour % 12 || 12
-  return `${h12}:${m || '00'} ${ampm}`
+  // start_time/end_time are stored as timestamptz, but legacy rows may hold "HH:MM"
+  if (/^\d{2}:\d{2}/.test(timeStr)) {
+    const [h, m] = timeStr.split(':')
+    const hour = parseInt(h || '0')
+    const ampm = hour >= 12 ? 'PM' : 'AM'
+    const h12 = hour % 12 || 12
+    return `${h12}:${m || '00'} ${ampm}`
+  }
+  const d = new Date(timeStr)
+  if (isNaN(d.getTime())) return ''
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
 function normalizeWhatsAppNumber(num: string): string {
@@ -309,6 +315,7 @@ export function Events() {
   // Create form
   const [showCreate, setShowCreate] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
   const [formTitle, setFormTitle] = useState('')
   const [formDesc, setFormDesc] = useState('')
   const [formDate, setFormDate] = useState('')
@@ -390,28 +397,40 @@ export function Events() {
     setFormTitle(''); setFormDesc(''); setFormDate(''); setFormStartTime(''); setFormEndTime('')
     setFormVenue(''); setFormDept(''); setFormOrganizer('')
     setFormRegUrl(''); setFormInstaUrl(''); setFormWhatsappNumber(''); setFormWhatsappGroup('')
-    setFormBanner(null); if (formBannerPreview) URL.revokeObjectURL(formBannerPreview); setFormBannerPreview(null); setBannerError(null)
+    setFormBanner(null); if (formBannerPreview) URL.revokeObjectURL(formBannerPreview); setFormBannerPreview(null); setBannerError(null); setCreateError(null)
   }
 
   const handleCreateEvent = async () => {
     if (!user || !formTitle.trim() || !formDate) return
+    if (creating) return
     setCreating(true)
+    setCreateError(null)
     try {
       let bannerUrl: string | undefined
       if (formBanner) bannerUrl = await uploadItemImage(user.id, formBanner)
-      const datetime = formStartTime ? `${formDate}T${formStartTime}:00` : `${formDate}T00:00:00`
-      const endTime = formEndTime ? `${formDate}T${formEndTime}:00` : undefined
+      // event_date / start_time / end_time are timestamptz columns — send full ISO strings.
+      // Sending bare "HH:MM" here makes Postgres reject the whole insert.
+      const startTime = formStartTime ? new Date(`${formDate}T${formStartTime}:00`).toISOString() : null
+      const endTime = formEndTime ? new Date(`${formDate}T${formEndTime}:00`).toISOString() : null
+      const eventDate = startTime || new Date(`${formDate}T00:00:00`).toISOString()
       const ev = await createEvent(
-        user.id, formTitle.trim(), formDesc.trim(), datetime,
+        user.id, formTitle.trim(), formDesc.trim(), eventDate,
         formVenue.trim() || undefined, undefined, formOrganizer.trim() || undefined,
-        bannerUrl, formStartTime || undefined, endTime,
+        bannerUrl, startTime || undefined, endTime || undefined,
         formRegUrl.trim() || undefined, formInstaUrl.trim() || undefined,
-        formWhatsappNumber.trim() || undefined, formWhatsappGroup.trim() || undefined,
-        undefined, formDept || undefined,
+        undefined, formWhatsappGroup.trim() || undefined,
+        formWhatsappNumber.trim() || undefined,
+        formDept || undefined,
       )
       setEvents(prev => [ev, ...prev])
       resetCreateForm(); setShowCreate(false)
-    } catch {} finally { setCreating(false) }
+    } catch (err: any) {
+      console.error('Create event failed:', err)
+      const msg = err?.message || String(err || '')
+      setCreateError(msg.includes('not found') || msg.includes('relation')
+        ? 'Could not create the event. Please try again.'
+        : msg || 'Could not create the event. Please try again.')
+    } finally { setCreating(false) }
   }
 
   // Event detail page (routed via /events/:id)
@@ -599,6 +618,10 @@ export function Events() {
                 className="w-full px-3 py-2.5 rounded-xl bg-ink-800 border border-ink-700 text-white text-sm placeholder:text-gray-600 focus:outline-none focus:border-zeal-500" />
             </div>
           </div>
+
+          {createError && (
+            <p className="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-xl px-3 py-2">{createError}</p>
+          )}
 
           <button onClick={handleCreateEvent} disabled={!formTitle.trim() || !formDate || creating}
             className="w-full py-2.5 rounded-xl bg-zeal-500 text-white font-medium text-sm hover:bg-zeal-600 transition-colors disabled:opacity-50">

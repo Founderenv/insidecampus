@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import type { Profile, Branch, Post, GossipPost, Confession, Teacher, EventItem, Club, Project, Achievement, MarketplaceListing, LostFoundItem, Builder, ChatRoom, ChatMessage, Notification, TeamRequest, Skill, Interest, HiddenProfile, TeacherReview, EventVolunteer, EventCommunityMessage, EventResource, NearbyPlace, NearbyReview, HousingListing, HousingListingImage } from '@/types'
+import type { Profile, Branch, Post, GossipPost, Confession, Teacher, EventItem, Club, Project, Achievement, MarketplaceListing, LostFoundItem, Builder, ChatRoom, ChatMessage, Notification, TeamRequest, Skill, Interest, HiddenProfile, TeacherReview, EventVolunteer, EventCommunityMessage, EventResource, NearbyPlace, NearbyReview, HousingListing, HousingListingImage, ContactRequest } from '@/types'
 
 // ========================================
 // INPUT VALIDATION
@@ -1135,8 +1135,10 @@ export async function fetchProfileAchievements(profileId: string) {
 }
 
 // === Marketplace ===
+const SAFE_PROFILE_COLUMNS = 'id, full_name, username, avatar_url'
+
 export async function fetchMarketplace(category?: string) {
-  let query = supabase.from('marketplace_listings').select('*, seller:profiles!marketplace_listings_seller_id_fkey(*)').order('created_at', { ascending: false })
+  let query = supabase.from('marketplace_listings').select(`*, seller:profiles!marketplace_listings_seller_id_fkey(${SAFE_PROFILE_COLUMNS})`).order('created_at', { ascending: false })
   if (category && category !== 'all') query = query.eq('category', category)
   const { data, error } = await query
   if (error) throw error
@@ -1157,7 +1159,7 @@ export async function uploadItemImage(userId: string, file: File): Promise<strin
 
 // === Lost & Found ===
 export async function fetchLostFound(type?: string) {
-  let query = supabase.from('lost_found_items').select('*, owner:profiles!lost_found_items_owner_id_fkey(*)').order('created_at', { ascending: false })
+  let query = supabase.from('lost_found_items').select(`*, owner:profiles!lost_found_items_owner_id_fkey(${SAFE_PROFILE_COLUMNS})`).order('created_at', { ascending: false })
   if (type && type !== 'all') query = query.eq('type', type)
   const { data, error } = await query
   if (error) throw error
@@ -1617,7 +1619,7 @@ export async function fetchHousingListings(listingType?: string) {
 }
 
 export async function fetchHousingListingById(id: string) {
-  const { data, error } = await supabase.from('housing_listings').select('*, owner:profiles!housing_listings_owner_id_fkey(id, full_name, username, avatar_url, phone)').eq('id', id).maybeSingle()
+  const { data, error } = await supabase.from('housing_listings').select('*, owner:profiles!housing_listings_owner_id_fkey(id, full_name, username, avatar_url)').eq('id', id).maybeSingle()
   if (error) throw error
   if (!data) return null
   const { data: images } = await supabase.from('housing_listing_images').select('*').eq('listing_id', id).order('sort_order')
@@ -1664,4 +1666,38 @@ export async function toggleHousingInterest(listingId: string, userId: string) {
 export async function fetchHousingInterestIds(userId: string) {
   const { data } = await supabase.from('housing_interests').select('listing_id').eq('user_id', userId)
   return new Set(data?.map(d => d.listing_id) || [])
+}
+
+// === Contact Requests ===
+
+export async function sendContactRequest(senderId: string, recipientId: string, requestType: string, referenceId?: string, message?: string) {
+  const { data, error } = await supabase.from('contact_requests').insert({ sender_id: senderId, recipient_id: recipientId, request_type: requestType, reference_id: referenceId || null, message: message || null }).select('*, sender:profiles!contact_requests_sender_id_fkey(id, full_name, username, avatar_url)').maybeSingle()
+  if (error) throw error
+  return data as ContactRequest
+}
+
+export async function fetchContactRequests(userId: string, type?: 'sent' | 'received') {
+  let query = supabase.from('contact_requests').select('*, sender:profiles!contact_requests_sender_id_fkey(id, full_name, username, avatar_url), recipient:profiles!contact_requests_recipient_id_fkey(id, full_name, username, avatar_url)').order('created_at', { ascending: false })
+  if (type === 'sent') query = query.eq('sender_id', userId)
+  else if (type === 'received') query = query.eq('recipient_id', userId)
+  else query = query.or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
+  const { data, error } = await query
+  if (error) throw error
+  return data as ContactRequest[]
+}
+
+export async function updateContactRequestStatus(requestId: string, userId: string, status: string) {
+  const { error } = await supabase.from('contact_requests').update({ status, updated_at: new Date().toISOString() }).eq('id', requestId).eq('recipient_id', userId)
+  if (error) throw error
+}
+
+export async function deleteContactRequest(requestId: string, userId: string) {
+  const { error } = await supabase.from('contact_requests').delete().eq('id', requestId).eq('sender_id', userId)
+  if (error) throw error
+}
+
+export async function fetchListingOwnerPhone(ownerId: string) {
+  const { data, error } = await supabase.from('profiles').select('phone').eq('id', ownerId).maybeSingle()
+  if (error) throw error
+  return data?.phone as string | null
 }

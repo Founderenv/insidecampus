@@ -73,6 +73,11 @@ export function Onboarding() {
     return () => clearTimeout(timer)
   }, [username, user?.id])
 
+  if (user && profile?.onboarding_completed) {
+    navigate('/home', { replace: true })
+    return null
+  }
+
   if (!user) {
     navigate('/login', { replace: true })
     return null

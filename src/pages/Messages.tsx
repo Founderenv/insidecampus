@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { MessageCircle, Search, ArrowLeft, Send } from 'lucide-react'
 import { Avatar } from '@/components/Avatar'
 import { SkeletonList } from '@/components/Skeleton'
@@ -20,6 +20,7 @@ interface Conversation {
 export function Messages() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -28,11 +29,21 @@ export function Messages() {
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const withParamHandled = useRef(false)
 
   useEffect(() => {
     if (!user) return
     loadConversations()
   }, [user])
+
+  useEffect(() => {
+    if (!user || withParamHandled.current) return
+    const withId = searchParams.get('with')
+    if (!withId) return
+    withParamHandled.current = true
+    setSearchParams({}, { replace: true })
+    setTimeout(() => startNewConversation(withId), 150)
+  }, [user, searchParams])
 
   const loadConversations = async () => {
     if (!user) return

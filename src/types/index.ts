@@ -445,3 +445,17 @@ export interface HousingInterest {
   user_id: string
   created_at: string
 }
+
+export interface ContactRequest {
+  id: string
+  sender_id: string
+  recipient_id: string
+  request_type: string
+  reference_id: string | null
+  message: string | null
+  status: string
+  created_at: string
+  updated_at: string
+  sender?: Profile
+  recipient?: Profile
+}

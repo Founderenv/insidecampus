@@ -6,6 +6,16 @@ import { Avatar } from '@/components/Avatar'
 import { updateProfile, uploadAvatar, checkUsernameAvailability, fetchBranches, sanitizeText } from '@/lib/data'
 import type { Branch } from '@/types'
 
+function normalizePhone(raw: string): string | null {
+  const cleaned = raw.replace(/[\s\-().]/g, '')
+  if (!cleaned) return null
+  if (!/^\+?\d{10,15}$/.test(cleaned)) return null
+  const digits = cleaned.replace(/\D/g, '')
+  if (cleaned.startsWith('+')) return `+${digits}`
+  if (digits.length === 12 && digits.startsWith('91')) return `+${digits}`
+  return `+91${digits}`
+}
+
 export function EditProfile() {
   const navigate = useNavigate()
   const { profile, refreshProfile } = useAuth()
@@ -13,6 +23,7 @@ export function EditProfile() {
   const [username, setUsername] = useState('')
   const [bio, setBio] = useState('')
   const [instagram, setInstagram] = useState('')
+  const [phone, setPhone] = useState('')
   const [year, setYear] = useState(1)
   const [branchId, setBranchId] = useState('')
   const [branches, setBranches] = useState<Branch[]>([])
@@ -29,6 +40,7 @@ export function EditProfile() {
       setUsername(profile.username || '')
       setBio(profile.bio || '')
       setInstagram(profile.instagram || '')
+      setPhone(profile.phone || '')
       setYear(profile.year || 1)
       setBranchId(profile.branch_id || '')
     }
@@ -80,6 +92,11 @@ export function EditProfile() {
       setError('Username is already taken')
       return
     }
+    const normalizedPhone = normalizePhone(phone.trim())
+    if (phone.trim() && !normalizedPhone) {
+      setError('Enter a valid phone number (e.g. 9876543210 or +919876543210)')
+      return
+    }
     setSaving(true)
     setError('')
     try {
@@ -88,6 +105,7 @@ export function EditProfile() {
         username: username || null,
         bio: sanitizeText(bio),
         instagram: instagram || null,
+        phone: normalizedPhone,
         year,
         branch_id: branchId || null,
       } as any)
@@ -211,6 +229,30 @@ export function EditProfile() {
             placeholder="@username"
             maxLength={30}
           />
+        </div>
+
+        <div>
+          <label className="text-sm text-gray-400 mb-1.5 block">Phone / WhatsApp <span className="text-gray-600">(optional)</span></label>
+          <div className="flex gap-2">
+            <input
+              className="input flex-1"
+              type="tel"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              placeholder="9876543210 or +919876543210"
+              maxLength={16}
+            />
+            {phone && (
+              <button
+                type="button"
+                onClick={() => setPhone('')}
+                className="shrink-0 px-3 rounded-xl bg-ink-800 border border-ink-700 text-gray-400 hover:text-white text-xs transition-colors"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-gray-600 mt-1">Used for WhatsApp / call contact on your listings. Never shown on your public profile.</p>
         </div>
 
         <div>

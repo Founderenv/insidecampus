@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { ShoppingBag, Plus, Bookmark, BookmarkCheck, Tag, Image as ImageIcon, X } from 'lucide-react'
+import { ShoppingBag, Plus, Bookmark, BookmarkCheck, Tag, Image as ImageIcon, X, MessageCircle } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { Avatar } from '@/components/Avatar'
 import { SkeletonList } from '@/components/Skeleton'
 import { EmptyState, ErrorState } from '@/components/States'
 import { Sheet } from '@/components/Sheet'
+import { ContactSheet } from '@/components/ContactSheet'
 import { fetchMarketplace, createMarketplaceListing, toggleMarketplaceSave, fetchMarketplaceSaveIds, markListingSold, uploadItemImage, validateImageFile } from '@/lib/data'
 import { formatNumber } from '@/lib/utils'
 import type { MarketplaceListing } from '@/types'
@@ -29,6 +30,7 @@ export function Marketplace() {
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
   const [sheetOpen, setSheetOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [contactListing, setContactListing] = useState<MarketplaceListing | null>(null)
 
   const [formTitle, setFormTitle] = useState('')
   const [formDesc, setFormDesc] = useState('')
@@ -249,6 +251,15 @@ export function Marketplace() {
                     <span className="text-xs text-gray-500">{listing.seller?.full_name}</span>
                   </div>
                   <div className="flex items-center gap-2">
+                    {user && !isOwner && !listing.is_sold && (
+                      <button
+                        onClick={() => setContactListing(listing)}
+                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-zeal-500 text-white text-xs font-medium hover:bg-zeal-600 transition-colors"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        Contact Seller
+                      </button>
+                    )}
                     {user && !isOwner && (
                       <button
                         onClick={() => handleSave(listing.id)}
@@ -367,6 +378,19 @@ export function Marketplace() {
           </button>
         </div>
       </Sheet>
+
+      <ContactSheet
+        open={!!contactListing}
+        onClose={() => setContactListing(null)}
+        title="Contact Seller"
+        ownerId={contactListing?.seller_id || ''}
+        ownerName={contactListing?.seller?.full_name || 'Seller'}
+        ownerAvatar={contactListing?.seller?.avatar_url || null}
+        itemName={contactListing?.title || ''}
+        whatsAppMessage={`Hi, I found your ${contactListing?.title || ''} listing on InsideZeal. Is it still available?`}
+        requestType="marketplace"
+        referenceId={contactListing?.id}
+      />
     </div>
   )
 }

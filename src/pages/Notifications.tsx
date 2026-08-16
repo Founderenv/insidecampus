@@ -22,6 +22,7 @@ const iconMap: Record<string, typeof Heart> = {
 }
 
 function getNotificationRoute(n: Notification): string | null {
+  if (n.entity_type === 'contact_request' && n.entity_id) return '/requests'
   if (n.entity_type === 'post' && n.entity_id) return `/post/${n.entity_id}`
   if (n.entity_type === 'user' && n.actor) return `/profile/${n.actor.username}`
   if (n.type === 'follow' && n.actor) return `/profile/${n.actor.username}`
@@ -70,7 +71,12 @@ export function Notifications() {
         <h1 className="text-3xl font-display font-bold text-white mb-1 flex items-center gap-2">
           <Bell className="w-7 h-7 text-zeal-500" /> Notifications
         </h1>
-        <p className="text-gray-500 text-sm">Stay updated on campus activity.</p>
+        <div className="flex items-center justify-between">
+          <p className="text-gray-500 text-sm">Stay updated on campus activity.</p>
+          <button onClick={() => navigate('/requests')} className="text-xs text-zeal-400 hover:text-zeal-300 shrink-0">
+            Contact requests →
+          </button>
+        </div>
       </div>
 
       {loading ? (
