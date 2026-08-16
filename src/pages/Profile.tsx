@@ -35,7 +35,6 @@ const AURA_EMOJIS: Record<string, string> = {
 
 const CREATE_OPTIONS = [
   { label: 'Post', icon: '📝', path: '/create', identity: 'real' },
-  { label: 'Gossip', icon: '🔥', path: '/gossip', identity: 'hidden', createType: 'gossip' },
   { label: 'Confession', icon: '🤫', path: '/confessions', identity: 'hidden', createType: 'confession' },
   { label: 'Learn / Resource', icon: '📚', path: '/resources/new', identity: 'real' },
   { label: 'Marketplace', icon: '🛒', path: '/marketplace', identity: 'real' },

@@ -39,7 +39,7 @@ function ProtectedRoutes() {
 
   if (loading && !isPreviewMode) return <LoadingScreen />
   if (!user && !isPreviewMode) return <Navigate to="/login" replace />
-  if (!isPreviewMode && !profile?.onboarding_completed) return <Navigate to="/onboarding" replace />
+  if (!isPreviewMode && profile && !profile.onboarding_completed) return <Navigate to="/onboarding" replace />
 
   return (
     <div className="min-h-screen flex bg-ink-950">
@@ -80,6 +80,7 @@ function ProtectedRoutes() {
               <Route path="/resources" element={<Navigate to="/home" replace />} />
               <Route path="/resources-learn" element={<Resources />} />
               <Route path="/profile/:username" element={<Profile />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="/" element={<Navigate to="/home" replace />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

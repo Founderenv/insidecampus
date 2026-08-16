@@ -6,7 +6,7 @@ const items = [
   { icon: Flame, label: 'Gossip', path: '/gossip' },
   { icon: BookOpen, label: 'Learn', path: '/resources-learn' },
   { icon: Heart, label: 'Chat', path: '/match' },
-  { icon: User, label: 'Profile', path: '/profile/me' },
+  { icon: User, label: 'Profile', path: '/profile' },
 ]
 
 export function BottomNav() {
@@ -17,7 +17,7 @@ export function BottomNav() {
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 glass border-t border-ink-700 safe-bottom">
       <div className="flex items-center justify-around px-1 py-1 max-w-lg mx-auto">
         {items.map((item) => {
-          const isActive = item.path === '/profile/me'
+          const isActive = item.path === '/profile'
             ? location.pathname.startsWith('/profile')
             : location.pathname.startsWith(item.path)
           const Icon = item.icon

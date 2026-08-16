@@ -1,287 +1,262 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Flame, TrendingUp, Clock, Eye, Heart, MessageCircle, MoreHorizontal, Plus, Send, Flag } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { Flame, Send, ArrowLeft, Users, Hash } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
-import { HiddenAvatar } from '@/components/HiddenAvatar'
+import { isPreviewMode } from '@/lib/preview'
+import { Avatar } from '@/components/Avatar'
 import { SkeletonList } from '@/components/Skeleton'
-import { EmptyState, ErrorState } from '@/components/States'
-import { Sheet } from '@/components/Sheet'
-import {
-  fetchGossip, createGossipPost, toggleGossipLike, fetchGossipLikeIds,
-  fetchMyHiddenProfile, reportContent, fetchBranches,
-} from '@/lib/data'
-import { timeAgo, formatNumber } from '@/lib/utils'
-import type { GossipPost, Branch } from '@/types'
+import { EmptyState } from '@/components/States'
+import { fetchGossipRooms, fetchChatMessages, sendChatMessage, fetchProfile, getDemoGossipMessages } from '@/lib/data'
+import type { DemoChatMessage } from '@/lib/data'
+import { timeAgo } from '@/lib/utils'
+import type { ChatRoom, ChatMessage } from '@/types'
 
-const categoryTabs = [
-  { id: 'all', label: 'All', icon: Flame },
-  { id: 'trending', label: 'Trending', icon: TrendingUp },
-  { id: 'latest', label: 'Latest', icon: Clock },
-]
-
-const postCategories = [
-  { id: 'trending', label: 'Trending' },
-  { id: 'latest', label: 'Latest' },
-  { id: 'funny', label: 'Funny' },
-  { id: 'drama', label: 'Drama' },
-  { id: 'campus', label: 'Campus' },
-]
+type DisplayMessage = {
+  id: string
+  author_id: string
+  content: string
+  created_at: string
+  author?: { full_name: string; avatar_url: string | null; username: string | null }
+}
 
 export function Gossip() {
   const { user, profile } = useAuth()
-  const [posts, setPosts] = useState<GossipPost[]>([])
+  const [rooms, setRooms] = useState<ChatRoom[]>([])
+  const [activeRoom, setActiveRoom] = useState<ChatRoom | null>(null)
+  const [messages, setMessages] = useState<DisplayMessage[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
-  const [activeTab, setActiveTab] = useState('all')
-  const [sortBy, setSortBy] = useState<'latest' | 'trending'>('latest')
-  const [likedIds, setLikedIds] = useState<Set<string>>(new Set())
-  const [branches, setBranches] = useState<Branch[]>([])
-  const [activeBranch, setActiveBranch] = useState<string | null>(null) // null = All, 'campus' = Campus only, string = dept
+  const [sending, setSending] = useState(false)
+  const [input, setInput] = useState('')
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [demoMode, setDemoMode] = useState(false)
 
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const [content, setContent] = useState('')
-  const [postCategory, setPostCategory] = useState('latest')
-  const [postScope, setPostScope] = useState<'campus' | 'department'>('campus')
-  const [submitting, setSubmitting] = useState(false)
-  const [hiddenProfile, setHiddenProfile] = useState<{ id: string; code: string } | null>(null)
-  const [hiddenProfileChecked, setHiddenProfileChecked] = useState(false)
-
-  const [reportSheetOpen, setReportSheetOpen] = useState(false)
-  const [reportTargetId, setReportTargetId] = useState('')
-  const [reportReason, setReportReason] = useState('')
-  const [reporting, setReporting] = useState(false)
-
-  const userBranch = profile?.branch_id ? branches.find(b => b.id === profile.branch_id) : null
+  const deptName = profile?.branch_id ? 'Computer Engineering' : 'My Department'
 
   useEffect(() => {
-    fetchBranches().then(setBranches).catch(() => {})
-  }, [])
-
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    setError(false)
-    try {
-      const sort = activeTab === 'trending' ? 'trending' : activeTab === 'latest' ? 'latest' : sortBy
-      const data = await fetchGossip(undefined, sort, 20, activeBranch === 'campus' ? 'campus' : activeBranch || undefined)
-      setPosts(data)
-      if (user) {
-        const ids = await fetchGossipLikeIds(user.id)
-        setLikedIds(ids)
-      }
-    } catch {
-      setError(true)
-    } finally {
+    if (!user && !isPreviewMode) {
       setLoading(false)
+      return
     }
-  }, [activeTab, sortBy, user, activeBranch])
 
-  useEffect(() => { loadData() }, [loadData])
+    const loadRooms = async () => {
+      try {
+        const userId = user?.id || '00000000-0000-0000-0000-000000000000'
+        const fetchedRooms = await fetchGossipRooms(userId)
+        if (fetchedRooms.length > 0) {
+          setRooms(fetchedRooms)
+        } else if (isPreviewMode) {
+          // Create virtual rooms for preview mode
+          setRooms([
+            { id: 'gossip-campus', name: 'InsideZeal Campus', slug: 'gossip-campus', type: 'campus', branch_id: null, icon: '🏫', member_count: 128 },
+            { id: 'gossip-dept', name: deptName, slug: 'gossip-dept', type: 'department', branch_id: profile?.branch_id || null, icon: '💻', member_count: 42 },
+          ])
+        }
+      } catch {
+        if (isPreviewMode) {
+          setRooms([
+            { id: 'gossip-campus', name: 'InsideZeal Campus', slug: 'gossip-campus', type: 'campus', branch_id: null, icon: '🏫', member_count: 128 },
+            { id: 'gossip-dept', name: deptName, slug: 'gossip-dept', type: 'department', branch_id: profile?.branch_id || null, icon: '💻', member_count: 42 },
+          ])
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadRooms()
+  }, [user, profile, deptName])
 
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab)
-    if (tab === 'trending') setSortBy('trending')
-    else if (tab === 'latest') setSortBy('latest')
-  }
+  useEffect(() => {
+    if (!activeRoom) return
 
-  const openCreateSheet = async () => {
-    if (!user) return
-    setHiddenProfileChecked(false)
-    setSheetOpen(true)
+    if (isPreviewMode && !user) {
+      // Load demo messages for preview
+      const demoMsgs = getDemoGossipMessages(activeRoom.slug)
+      setMessages(demoMsgs)
+      setDemoMode(true)
+      return
+    }
+
+    setDemoMode(false)
+    fetchChatMessages(activeRoom.id).then(msgs => {
+      setMessages(msgs.map(m => ({
+        id: m.id,
+        author_id: m.author_id,
+        content: m.content,
+        created_at: m.created_at,
+        author: m.author ? { full_name: m.author.full_name, avatar_url: m.author.avatar_url, username: m.author.username } : undefined,
+      })))
+    }).catch(() => {})
+
+    const channel = supabase
+      .channel(`gossip-chat-${activeRoom.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'chat_messages',
+        filter: `room_id=eq.${activeRoom.id}`,
+      }, async (payload) => {
+        const raw = payload.new as ChatMessage
+        let author = undefined
+        try { author = (await fetchProfile(raw.author_id)) ?? undefined } catch {}
+        setMessages(prev => {
+          if (prev.some(m => m.id === raw.id)) return prev
+          return [...prev, { id: raw.id, author_id: raw.author_id, content: raw.content, created_at: raw.created_at, author: author ? { full_name: author.full_name, avatar_url: author.avatar_url, username: author.username } : undefined }]
+        })
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [activeRoom, user])
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  const handleSend = async () => {
+    if (!input.trim() || !user || !activeRoom || demoMode) return
+    setSending(true)
+    const content = input.trim()
+    setInput('')
     try {
-      const hp = await fetchMyHiddenProfile(user.id)
-      setHiddenProfile(hp ? { id: hp.id, code: hp.anonymous_code } : null)
+      await sendChatMessage(activeRoom.id, user.id, content)
     } catch {
-      setHiddenProfile(null)
+      setInput(content)
     } finally {
-      setHiddenProfileChecked(true)
+      setSending(false)
     }
   }
 
-  const handleCreate = async () => {
-    if (!hiddenProfile || !content.trim()) return
-    setSubmitting(true)
-    try {
-      const branchId = postScope === 'department' && profile?.branch_id ? profile.branch_id : null
-      await createGossipPost(hiddenProfile.id, content.trim(), postCategory, undefined, branchId)
-      setContent('')
-      setPostCategory('latest')
-      setPostScope('campus')
-      setSheetOpen(false)
-      loadData()
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setSubmitting(false)
-    }
+  if (loading) return <SkeletonList count={3} />
+
+  if (activeRoom) {
+    return (
+      <div className="flex flex-col" style={{ height: 'calc(100vh - 8rem)' }}>
+        {/* Chat Header */}
+        <div className="flex items-center gap-3 pb-3 border-b border-ink-800 shrink-0">
+          <button onClick={() => setActiveRoom(null)} className="text-gray-400 hover:text-white p-1">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div className="w-10 h-10 rounded-xl bg-ink-800 flex items-center justify-center text-xl shrink-0">
+            {activeRoom.icon || '💬'}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="font-semibold text-white text-sm">{activeRoom.name}</h2>
+            <p className="text-xs text-gray-500">{activeRoom.member_count} members</p>
+          </div>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto space-y-3 py-3 min-h-0">
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center py-8">
+              <Users className="w-10 h-10 text-gray-600 mb-3" />
+              <p className="text-sm text-gray-400">No messages yet</p>
+              <p className="text-xs text-gray-600 mt-1">Start the conversation!</p>
+            </div>
+          ) : (
+            messages.map(msg => {
+              const isOwn = msg.author_id === user?.id
+              return (
+                <div key={msg.id} className={`flex gap-2.5 ${isOwn ? 'flex-row-reverse' : ''}`}>
+                  <Avatar src={msg.author?.avatar_url || null} alt={msg.author?.full_name || ''} size="sm" />
+                  <div className={`max-w-[75%] ${isOwn ? 'text-right' : ''}`}>
+                    {!isOwn && <p className="text-xs text-gray-400 mb-0.5 font-medium">{msg.author?.full_name}</p>}
+                    <div className={`rounded-2xl px-3.5 py-2.5 text-sm ${isOwn ? 'bg-zeal-500 text-ink-950' : 'bg-ink-800 text-gray-200'}`}>
+                      {msg.content}
+                    </div>
+                    <p className="text-[10px] text-gray-600 mt-0.5">{timeAgo(msg.created_at)}</p>
+                  </div>
+                </div>
+              )
+            })
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input */}
+        <div className="flex gap-2 items-center pt-3 border-t border-ink-800 shrink-0">
+          {demoMode ? (
+            <div className="flex-1 input text-sm text-gray-500 flex items-center">
+              Sign in required to send messages
+            </div>
+          ) : (
+            <input
+              className="input flex-1"
+              placeholder={`Message ${activeRoom.name}...`}
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSend()}
+              disabled={sending}
+            />
+          )}
+          <button onClick={handleSend} disabled={!input.trim() || sending || demoMode} className="btn-primary p-3 min-w-[44px] min-h-[44px]">
+            <Send className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    )
   }
 
-  const handleLike = async (g: GossipPost) => {
-    if (!user) return
-    const isLiked = likedIds.has(g.id)
-    setLikedIds(prev => { const next = new Set(prev); isLiked ? next.delete(g.id) : next.add(g.id); return next })
-    setPosts(prev => prev.map(p => p.id === g.id ? { ...p, like_count: p.like_count + (isLiked ? -1 : 1) } : p))
-    try {
-      await toggleGossipLike(g.id, user.id, isLiked)
-    } catch {
-      setLikedIds(prev => { const next = new Set(prev); isLiked ? next.add(g.id) : next.delete(g.id); return next })
-      setPosts(prev => prev.map(p => p.id === g.id ? { ...p, like_count: p.like_count + (isLiked ? 1 : -1) } : p))
-    }
-  }
-
-  const openReport = (id: string) => { setReportTargetId(id); setReportReason(''); setReportSheetOpen(true) }
-
-  const handleReport = async () => {
-    if (!user || !reportReason.trim()) return
-    setReporting(true)
-    try { await reportContent(user.id, 'gossip', reportTargetId, reportReason.trim()); setReportSheetOpen(false) } catch {} finally { setReporting(false) }
-  }
-
+  // Room selector view
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-display font-bold text-white flex items-center gap-2">
-            <Flame className="w-5 h-5 text-orange-400" /> Gossip
-          </h1>
-          <p className="text-gray-500 text-xs mt-0.5">Anonymous campus buzz. Be kind.</p>
-        </div>
-        <button onClick={openCreateSheet} className="btn-primary flex items-center gap-1.5 text-sm">
-          <Plus className="w-4 h-4" /> Post
-        </button>
+      <div>
+        <h1 className="text-xl font-display font-bold text-white flex items-center gap-2">
+          <Flame className="w-5 h-5 text-orange-400" /> Gossip
+        </h1>
+        <p className="text-gray-500 text-xs mt-0.5">Real identity group chats. Be respectful.</p>
       </div>
 
-      {/* Department Chips */}
+      {/* Room Tabs */}
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 lg:mx-0 lg:px-0 scrollbar-none">
-        <button onClick={() => setActiveBranch(null)} className={`chip shrink-0 ${activeBranch === null ? 'chip-active' : ''}`}>All</button>
-        <button onClick={() => setActiveBranch('campus')} className={`chip shrink-0 ${activeBranch === 'campus' ? 'chip-active' : ''}`}>Campus</button>
-        {branches.map(b => (
-          <button key={b.id} onClick={() => setActiveBranch(b.id)} className={`chip shrink-0 ${activeBranch === b.id ? 'chip-active' : ''}`}>{b.short_name}</button>
+        {rooms.map(room => (
+          <button
+            key={room.id}
+            onClick={() => setActiveRoom(room)}
+            className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-ink-850 border border-ink-700 hover:border-ink-600 transition-all text-left min-w-[140px]"
+          >
+            <div className="w-10 h-10 rounded-xl bg-ink-800 flex items-center justify-center text-lg shrink-0">
+              {room.icon || '💬'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-white text-sm truncate">{room.name}</p>
+              <p className="text-xs text-gray-500">{room.member_count} members</p>
+            </div>
+          </button>
         ))}
       </div>
 
-      {/* Category Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 lg:mx-0 lg:px-0 scrollbar-none">
-        {categoryTabs.map(c => {
-          const Icon = c.icon
-          return (
-            <button key={c.id} onClick={() => handleTabChange(c.id)} className={`chip shrink-0 ${activeTab === c.id ? 'chip-active' : ''}`}>
-              <Icon className="w-3.5 h-3.5" /> {c.label}
-            </button>
-          )
-        })}
-      </div>
-
-      {loading ? (
-        <SkeletonList count={4} />
-      ) : error ? (
-        <ErrorState onRetry={loadData} />
-      ) : posts.length === 0 ? (
-        <EmptyState
-          icon={<Flame className="w-7 h-7" />}
-          title="No gossip yet"
-          description="Be the first to share some campus buzz."
-          action={<button onClick={openCreateSheet} className="btn-primary text-sm">Create Post</button>}
-        />
-      ) : (
-        <div className="space-y-3">
-          {posts.map(g => (
-            <article key={g.id} className="card p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <HiddenAvatar seed={g.hidden_profile?.avatar_seed || ''} style={g.hidden_profile?.avatar_style} size="sm" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white font-mono">{g.hidden_profile?.anonymous_code || 'ZL-????'}</p>
-                  <p className="text-xs text-gray-500">{timeAgo(g.created_at)}</p>
-                </div>
-                {g.category && <span className="chip text-xs shrink-0">{g.category}</span>}
-                {!g.branch_id && <span className="text-[10px] text-zeal-400 bg-zeal-500/10 px-1.5 py-0.5 rounded-full shrink-0">Campus</span>}
-                {g.branch_id && branches.find(b => b.id === g.branch_id) && (
-                  <span className="text-[10px] text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-full shrink-0">
-                    {branches.find(b => b.id === g.branch_id)?.short_name}
-                  </span>
-                )}
-                <button onClick={() => openReport(g.id)} className="text-gray-500 hover:text-rose-400 p-1.5 min-w-[36px] min-h-[36px] flex items-center justify-center shrink-0">
-                  <MoreHorizontal className="w-4 h-4" />
-                </button>
-              </div>
-              <p className="text-gray-200 text-sm leading-relaxed">{g.content}</p>
-              {g.image_url && (
-                <img src={g.image_url} alt="gossip" className="rounded-xl w-full mt-3 max-h-80 object-cover" loading="lazy" />
-              )}
-              <div className="flex items-center gap-4 mt-3 text-gray-500">
-                <span className="flex items-center gap-1.5 text-xs"><Eye className="w-4 h-4" /> {formatNumber(g.view_count)}</span>
-                <button onClick={() => handleLike(g)} className={`flex items-center gap-1.5 text-xs transition-colors ${likedIds.has(g.id) ? 'text-rose-400' : 'hover:text-rose-400'}`}>
-                  <Heart className={`w-4 h-4 ${likedIds.has(g.id) ? 'fill-rose-400' : ''}`} /> {formatNumber(g.like_count)}
-                </button>
-                <span className="flex items-center gap-1.5 text-xs"><MessageCircle className="w-4 h-4" /> {formatNumber(g.comment_count)}</span>
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
-
-      {/* Create Gossip Sheet */}
-      <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title="Post Gossip">
-        {!hiddenProfileChecked ? (
-          <div className="text-center py-8 text-gray-500">Checking profile...</div>
-        ) : !hiddenProfile ? (
-          <div className="text-center py-8 space-y-3">
-            <p className="text-gray-300">Create your Zeal Avatar first to post anonymously.</p>
-            <a href="/settings" className="btn-primary inline-block text-sm">Go to Settings</a>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <HiddenAvatar seed={hiddenProfile.code} size="sm" />
-              <span>Posting as <span className="font-mono text-white">{hiddenProfile.code}</span></span>
+      {/* Room list */}
+      <div className="space-y-2">
+        {rooms.map(room => (
+          <button
+            key={room.id}
+            onClick={() => setActiveRoom(room)}
+            className="w-full flex items-center gap-3 p-4 card card-hover text-left"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-ink-800 flex items-center justify-center text-xl shrink-0">
+              {room.icon || '💬'}
             </div>
-
-            {/* Scope: Campus or My Department */}
-            {userBranch && (
-              <div>
-                <p className="text-xs text-gray-500 mb-2">Post to</p>
-                <div className="flex gap-2">
-                  <button onClick={() => setPostScope('campus')}
-                    className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${postScope === 'campus' ? 'bg-zeal-500 text-white' : 'bg-ink-800 border border-ink-700 text-gray-400'}`}>
-                    🌐 Campus
-                  </button>
-                  <button onClick={() => setPostScope('department')}
-                    className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${postScope === 'department' ? 'bg-zeal-500 text-white' : 'bg-ink-800 border border-ink-700 text-gray-400'}`}>
-                    🏫 {userBranch.short_name}
-                  </button>
-                </div>
-              </div>
-            )}
-            {!userBranch && (
-              <p className="text-xs text-gray-600">Posting to Campus (no department set in profile)</p>
-            )}
-
-            <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="What's the buzz?" rows={4} maxLength={2000} className="input w-full resize-none" />
-            <div>
-              <p className="text-xs text-gray-500 mb-2">Category</p>
-              <div className="flex flex-wrap gap-2">
-                {postCategories.map(c => (
-                  <button key={c.id} onClick={() => setPostCategory(c.id)} className={`chip text-xs ${postCategory === c.id ? 'chip-active' : ''}`}>{c.label}</button>
-                ))}
-              </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-white text-sm flex items-center gap-1.5">
+                <Hash className="w-3.5 h-3.5 text-gray-500" /> {room.name}
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">{room.member_count} members</p>
             </div>
-            <button onClick={handleCreate} disabled={!content.trim() || submitting}
-              className="btn-primary w-full flex items-center justify-center gap-2 text-sm disabled:opacity-50">
-              <Send className="w-4 h-4" /> {submitting ? 'Posting...' : 'Post Gossip'}
-            </button>
-          </div>
-        )}
-      </Sheet>
-
-      {/* Report Sheet */}
-      <Sheet open={reportSheetOpen} onClose={() => setReportSheetOpen(false)} title="Report Post">
-        <div className="space-y-4">
-          <p className="text-sm text-gray-400">Why are you reporting this?</p>
-          <textarea value={reportReason} onChange={e => setReportReason(e.target.value)} placeholder="Reason for reporting..." rows={3} className="input w-full resize-none" />
-          <button onClick={handleReport} disabled={!reportReason.trim() || reporting}
-            className="btn-primary w-full text-sm disabled:opacity-50 flex items-center justify-center gap-2">
-            <Flag className="w-4 h-4" /> {reporting ? 'Submitting...' : 'Submit Report'}
+            <div className="text-xs text-gray-600 shrink-0">
+              {room.type === 'campus' ? 'All students' : 'Department'}
+            </div>
           </button>
-        </div>
-      </Sheet>
+        ))}
+
+        {rooms.length === 0 && (
+          <EmptyState
+            icon={<Users className="w-7 h-7" />}
+            title="No gossip rooms"
+            description="Campus and department chat rooms will appear here."
+          />
+        )}
+      </div>
     </div>
   )
 }

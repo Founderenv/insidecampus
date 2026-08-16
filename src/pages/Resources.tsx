@@ -6,6 +6,25 @@ import { Sheet } from '@/components/Sheet'
 import type { Resource } from '@/lib/data'
 import type { Branch } from '@/types'
 
+const DEPARTMENT_LABELS: Record<string, string> = {
+  'AI & Data Science': 'AI & Data Science',
+  'AI & Machine Learning': 'AI & Machine Learning',
+  'Civil Engineering': 'Civil Engineering',
+  'Computer Engineering': 'Computer Engineering',
+  'Electronics & Computer Engg': 'Electronics & Computer Engg',
+  'E & TC Engineering': 'E & TC Engineering',
+  'Electrical Engineering': 'Electrical Engineering',
+  'Information Technology': 'Information Technology',
+  'Mechanical Engineering': 'Mechanical Engineering',
+  'Robotics & Automation': 'Robotics & Automation',
+  'Computer': 'Computer Engineering',
+  'IT': 'Information Technology',
+  'Mechanical': 'Mechanical Engineering',
+  'Electrical': 'Electrical Engineering',
+  'Civil': 'Civil Engineering',
+  'E&TC': 'E & TC Engineering',
+}
+
 const TYPES = [
   { value: 'all', label: 'All Types' },
   { value: 'notes', label: 'Notes' },
@@ -50,11 +69,11 @@ export default function Resources() {
   const [search, setSearch] = useState('')
   const [usefulSet, setUsefulSet] = useState<Set<string>>(new Set())
   const [savedSet, setSavedSet] = useState<Set<string>>(new Set())
-  const [branches, setBranches] = useState<Branch[]>([])
+  const [dbBranches, setDbBranches] = useState<Branch[]>([])
   const [filterOpen, setFilterOpen] = useState(false)
 
   useEffect(() => {
-    fetchBranches().then(setBranches).catch(() => {})
+    fetchBranches().then(setDbBranches).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -217,13 +236,13 @@ export default function Resources() {
               >
                 All Departments
               </button>
-              {branches.map(b => (
+              {dbBranches.map(b => (
                 <button
                   key={b.id}
                   onClick={() => setActiveBranch(b.id)}
                   className={`chip text-xs ${activeBranch === b.id ? 'chip-active' : ''}`}
                 >
-                  {b.short_name}
+                  {DEPARTMENT_LABELS[b.short_name] || DEPARTMENT_LABELS[b.name] || b.short_name || b.name}
                 </button>
               ))}
             </div>

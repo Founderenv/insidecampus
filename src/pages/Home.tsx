@@ -49,7 +49,7 @@ export function Home() {
   const [error, setError] = useState(false)
   const [activeTab, setActiveTab] = useState<HomeTab>('feed')
   const [branches, setBranches] = useState<Branch[]>([])
-  const [activeBranch, setActiveBranch] = useState<string | null>(null)
+  const [activeBranch, setActiveBranch] = useState<string | null>('campus') // 'campus' | dept id
   const [topRankers, setTopRankers] = useState<{ profile: Profile; category: string; emoji: string; rank: number }[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any>(null)
@@ -116,9 +116,11 @@ export function Home() {
 
   useEffect(() => { loadTabData(activeTab) }, [activeTab, loadTabData])
 
-  const filteredPosts = activeBranch
-    ? posts.filter(p => p.branch_id === activeBranch || !p.branch_id)
-    : posts
+  const filteredPosts = activeBranch === 'campus'
+    ? posts
+    : activeBranch
+      ? posts.filter(p => p.branch_id === activeBranch)
+      : posts
 
   return (
     <div className="space-y-4">
@@ -213,20 +215,19 @@ export function Home() {
       {!searchQuery && (
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 lg:mx-0 lg:px-0 scrollbar-none">
           <button
-            onClick={() => setActiveBranch(null)}
-            className={`chip shrink-0 ${!activeBranch ? 'chip-active' : ''}`}
+            onClick={() => setActiveBranch('campus')}
+            className={`chip shrink-0 ${activeBranch === 'campus' ? 'chip-active' : ''}`}
           >
-            All
+            Campus
           </button>
-          {branches.map(b => (
+          {profile?.branch_id && (
             <button
-              key={b.id}
-              onClick={() => setActiveBranch(b.id)}
-              className={`chip shrink-0 ${activeBranch === b.id ? 'chip-active' : ''}`}
+              onClick={() => setActiveBranch(profile.branch_id)}
+              className={`chip shrink-0 ${activeBranch === profile.branch_id ? 'chip-active' : ''}`}
             >
-              {b.short_name}
+              {branches.find(b => b.id === profile.branch_id)?.short_name || 'My Department'}
             </button>
-          ))}
+          )}
         </div>
       )}
 
