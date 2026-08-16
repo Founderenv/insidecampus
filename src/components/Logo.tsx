@@ -15,11 +15,9 @@ export function Logo({ size = 'md', showTagline = false }: LogoProps) {
     <div className="flex items-center gap-2.5">
       <div className={`${s.icon} relative shrink-0`}>
         <svg viewBox="0 0 64 64" fill="none" className="w-full h-full">
-          <rect width="64" height="64" rx="16" fill="#0a0b0f" />
-          <rect width="64" height="64" rx="16" stroke="#1f2330" strokeWidth="1" />
-          <path d="M20 44V20h5v19h12v5H20z" fill="#ffffff" />
-          <circle cx="42" cy="38" r="9" fill="#3b82f6" />
-          <circle cx="42" cy="38" r="4" fill="#0a0b0f" />
+          <circle cx="32" cy="32" r="31" fill="#0a0b0f" />
+          <circle cx="32" cy="32" r="31" stroke="#065f46" strokeWidth="1.5" opacity="0.6" />
+          <path d="M22 20h20l-20 24h20" stroke="#10b981" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
       <div className="flex flex-col leading-none">
