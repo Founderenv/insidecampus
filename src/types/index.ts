@@ -280,6 +280,12 @@ export interface ChatMessage {
   content: string
   reply_to: string | null
   image_url: string | null
+  message_type: string
+  attachment_path: string | null
+  attachment_name: string | null
+  attachment_mime: string | null
+  attachment_size: number | null
+  attachment_duration: number | null
   created_at: string
   author?: Profile
 }

@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
-import { isPreviewMode } from '@/lib/preview'
 import { Logo } from '@/components/Logo'
 
 export function Login() {
@@ -9,7 +8,6 @@ export function Login() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (isPreviewMode) { navigate('/home', { replace: true }); return }
     if (loading) return
     if (user && profile?.onboarding_completed) navigate('/home', { replace: true })
     else if (user && !profile?.onboarding_completed) navigate('/onboarding', { replace: true })
@@ -17,15 +15,17 @@ export function Login() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-ink-950 relative overflow-hidden">
-      {/* Background glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-zeal-500/10 rounded-full blur-3xl" />
+      {/* Background glows */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-zeal-500/8 rounded-full blur-3xl" />
       <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-zeal-600/5 rounded-full blur-3xl" />
 
       <div className="relative z-10 flex flex-col items-center gap-8 max-w-sm w-full">
+        {/* Logo + tagline */}
         <div className="animate-fade-in flex flex-col items-center gap-4">
           <Logo size="lg" showTagline />
         </div>
 
+        {/* Login card */}
         <div className="card p-6 w-full text-center animate-slide-up">
           <h1 className="text-2xl font-display font-bold text-white mb-2">
             Your campus. Your people. Your vibe.

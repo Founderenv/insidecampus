@@ -75,7 +75,7 @@
     @apply bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent;
   }
   .glow {
-    box-shadow: 0 0 24px rgba(0, 230, 118, 0.2);
+    box-shadow: 0 0 24px rgba(59, 130, 246, 0.2);
   }
 }
 

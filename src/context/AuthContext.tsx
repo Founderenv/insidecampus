@@ -1,8 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
-import { isPreviewMode } from '@/lib/preview'
-import { DEMO_PROFILE } from '@/lib/demoProfile'
 import type { Profile } from '@/types'
 
 interface AuthContextValue {
@@ -57,10 +55,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         loadProfile(session.user.id).finally(() => mounted && setLoading(false))
       } else {
-        // Preview mode: inject demo profile
-        if (isPreviewMode) {
-          setProfile(DEMO_PROFILE)
-        }
         setLoading(false)
       }
     })
@@ -74,12 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (mounted) setLoading(false)
         })()
       } else {
-        // Preview mode: inject demo profile
-        if (isPreviewMode) {
-          setProfile(DEMO_PROFILE)
-        } else {
-          setProfile(null)
-        }
+        setProfile(null)
         if (mounted) setLoading(false)
       }
     })

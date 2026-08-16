@@ -1047,14 +1047,126 @@ export async function fetchChatMessages(roomId: string, limit = 50) {
   return (data as ChatMessage[]).reverse()
 }
 
-export async function sendChatMessage(roomId: string, authorId: string, content: string) {
+export async function sendChatMessage(
+  roomId: string,
+  authorId: string,
+  content: string,
+  messageType = 'text',
+  attachment?: {
+    path: string
+    name: string
+    mime: string
+    size: number
+    duration?: number
+  }
+) {
+  const row: Record<string, unknown> = {
+    room_id: roomId,
+    author_id: authorId,
+    content,
+    message_type: messageType,
+  }
+  if (attachment) {
+    row.attachment_path = attachment.path
+    row.attachment_name = attachment.name
+    row.attachment_mime = attachment.mime
+    row.attachment_size = attachment.size
+    if (attachment.duration != null) row.attachment_duration = attachment.duration
+  }
   const { data, error } = await supabase
     .from('chat_messages')
-    .insert({ room_id: roomId, author_id: authorId, content })
+    .insert(row)
     .select('*, author:profiles!chat_messages_author_id_fkey(*)')
     .maybeSingle()
   if (error) throw error
   return data as ChatMessage
+}
+
+// === Gossip Attachments ===
+const GOSSIP_IMAGE_MAX = 10 * 1024 * 1024   // 10 MB
+const GOSSIP_DOC_MAX = 20 * 1024 * 1024     // 20 MB
+const GOSSIP_AUDIO_MAX = 15 * 1024 * 1024   // 15 MB
+const GOSSIP_VOICE_MAX = 5 * 60 * 1000      // 5 minutes (ms)
+
+const GOSSIP_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const GOSSIP_DOC_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain',
+]
+const GOSSIP_AUDIO_TYPES = ['audio/mpeg', 'audio/mp4', 'audio/webm', 'audio/ogg', 'audio/wav']
+
+export function validateGossipFile(file: File, type: 'image' | 'document' | 'audio'): { valid: boolean; error?: string } {
+  if (type === 'image') {
+    if (!GOSSIP_IMAGE_TYPES.includes(file.type)) return { valid: false, error: 'Only JPEG, PNG, and WebP images are allowed.' }
+    if (file.size > GOSSIP_IMAGE_MAX) return { valid: false, error: 'File is too large. Maximum 10 MB.' }
+  } else if (type === 'document') {
+    if (!GOSSIP_DOC_TYPES.includes(file.type)) return { valid: false, error: 'This file type is not supported.' }
+    if (file.size > GOSSIP_DOC_MAX) return { valid: false, error: 'File is too large. Maximum 20 MB.' }
+  } else if (type === 'audio') {
+    if (!GOSSIP_AUDIO_TYPES.includes(file.type)) return { valid: false, error: 'Only MP4, WebM, OGG, WAV, and MP3 audio files are allowed.' }
+    if (file.size > GOSSIP_AUDIO_MAX) return { valid: false, error: 'File is too large. Maximum 15 MB.' }
+  }
+  return { valid: true }
+}
+
+function extFromMime(mime: string): string {
+  const map: Record<string, string> = {
+    'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
+    'application/pdf': 'pdf', 'application/msword': 'doc',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+    'application/vnd.ms-powerpoint': 'ppt',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+    'application/vnd.ms-excel': 'xls',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+    'text/plain': 'txt',
+    'audio/mpeg': 'mp3', 'audio/mp4': 'm4a', 'audio/webm': 'webm',
+    'audio/ogg': 'ogg', 'audio/wav': 'wav',
+  }
+  return map[mime] || 'bin'
+}
+
+export async function uploadGossipAttachment(
+  roomId: string,
+  userId: string,
+  file: File
+): Promise<{ path: string; url: string }> {
+  const ext = extFromMime(file.type) || file.name.split('.').pop() || 'bin'
+  const objectName = `campus/${roomId}/${userId}/${crypto.randomUUID()}.${ext}`
+  const { error } = await supabase.storage.from('gossip-attachments').upload(objectName, file)
+  if (error) throw error
+  // For private bucket, use signed URL (1 hour expiry)
+  const { data: signed, error: signErr } = await supabase.storage
+    .from('gossip-attachments')
+    .createSignedUrl(objectName, 3600)
+  if (signErr) throw signErr
+  return { path: objectName, url: signed.signedUrl }
+}
+
+export async function getGossipAttachmentUrl(path: string): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from('gossip-attachments')
+    .createSignedUrl(path, 3600)
+  if (error) throw error
+  return data.signedUrl
+}
+
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+export function formatDuration(ms: number): string {
+  const totalSec = Math.floor(ms / 1000)
+  const min = Math.floor(totalSec / 60)
+  const sec = totalSec % 60
+  return `${min}:${sec.toString().padStart(2, '0')}`
 }
 
 // === Gossip Chat Rooms ===

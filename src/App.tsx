@@ -1,6 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
-import { isPreviewMode } from '@/lib/preview'
 import { Sidebar } from '@/components/Sidebar'
 import { BottomNav } from '@/components/BottomNav'
 import { LoadingScreen } from '@/pages/LoadingScreen'
@@ -37,17 +36,12 @@ import Resources from '@/pages/Resources'
 function ProtectedRoutes() {
   const { user, profile, loading } = useAuth()
 
-  if (loading && !isPreviewMode) return <LoadingScreen />
-  if (!user && !isPreviewMode) return <Navigate to="/login" replace />
-  if (!isPreviewMode && profile && !profile.onboarding_completed) return <Navigate to="/onboarding" replace />
+  if (loading) return <LoadingScreen />
+  if (!user) return <Navigate to="/login" replace />
+  if (profile && !profile.onboarding_completed) return <Navigate to="/onboarding" replace />
 
   return (
     <div className="min-h-screen flex bg-ink-950">
-      {isPreviewMode && (
-        <div className="fixed top-2 right-2 z-50 px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[10px] font-mono">
-          PREVIEW
-        </div>
-      )}
       <Sidebar />
       <div className="flex-1 min-w-0 flex flex-col">
         <main className="flex-1 min-h-0 overflow-y-auto pb-20 lg:pb-0">
