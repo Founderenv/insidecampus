@@ -31,6 +31,15 @@ const RANK_LABELS: Record<string, { emoji: string; label: string }> = {
   creator: { emoji: '🔥', label: 'Creator' },
 }
 
+function formatEventTime(timeStr: string): string {
+  if (!timeStr) return ''
+  const [h, m] = timeStr.split(':')
+  const hour = parseInt(h || '0')
+  const ampm = hour >= 12 ? 'PM' : 'AM'
+  const h12 = hour % 12 || 12
+  return `${h12}:${m || '00'} ${ampm}`
+}
+
 function formatPrice(n: number) {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n)
 }
@@ -176,7 +185,7 @@ export function Home() {
                 <div>
                   <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-2">Events</p>
                   {searchResults.events.map((e: EventItem) => (
-                    <button key={e.id} onClick={() => { setSearchQuery(''); navigate('/events') }}
+                    <button key={e.id} onClick={() => { setSearchQuery(''); navigate(`/events/${e.id}`) }}
                       className="w-full p-2.5 rounded-xl hover:bg-ink-800 transition-colors text-left">
                       <p className="text-sm font-semibold text-white">{e.title}</p>
                       <p className="text-xs text-gray-500">{e.venue || 'TBA'}</p>
@@ -288,22 +297,39 @@ export function Home() {
               <EmptyState icon={<Calendar className="w-7 h-7" />} title="No events" description="No upcoming events right now." />
             ) : (
               <div className="space-y-3">
-                {events.map(ev => (
-                  <div key={ev.id} className="card p-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-white text-sm">{ev.title}</h3>
-                        {ev.description && <p className="text-xs text-gray-400 mt-1 line-clamp-2">{ev.description}</p>}
+                <div className="flex justify-end">
+                  <button onClick={() => navigate('/events')} className="text-xs text-zeal-400 hover:text-zeal-300 font-medium">View All Events →</button>
+                </div>
+                {events.map(ev => {
+                  const dept = ev.organizing_department || ev.organizer || ''
+                  return (
+                    <button key={ev.id} onClick={() => navigate(`/events/${ev.id}`)}
+                      className="w-full text-left card overflow-hidden hover:bg-ink-800 transition-colors">
+                      {(ev.banner_url || ev.poster_url) ? (
+                        <img src={ev.banner_url || ev.poster_url!} alt={ev.title}
+                          className="w-full h-32 object-cover" loading="lazy" />
+                      ) : (
+                        <div className="w-full h-20 bg-gradient-to-br from-zeal-500/20 to-ink-800 flex items-center justify-center">
+                          <Calendar className="w-8 h-8 text-zeal-500/40" />
+                        </div>
+                      )}
+                      <div className="p-3 space-y-1">
+                        <div>
+                          <h3 className="font-semibold text-white text-sm">{ev.title}</h3>
+                          {dept && <p className="text-[11px] text-zeal-400 mt-0.5">{dept}</p>}
+                        </div>
+                        {ev.description && <p className="text-xs text-gray-400 line-clamp-2">{ev.description}</p>}
+                        <div className="flex items-center gap-3 text-xs text-gray-500">
+                          <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(ev.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                          {ev.start_time && <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {formatEventTime(ev.start_time)}</span>}
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                          <HeartIcon className="w-3 h-3" /> {formatNumber(ev.interested_count)} interested
+                        </div>
                       </div>
-                      {ev.category && <span className="shrink-0 px-2 py-0.5 rounded-full bg-zeal-500/10 text-zeal-400 text-xs">{ev.category}</span>}
-                    </div>
-                    <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                      <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(ev.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                      {ev.venue && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {ev.venue}</span>}
-                      <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {formatNumber(ev.interested_count)}</span>
-                    </div>
-                  </div>
-                ))}
+                    </button>
+                  )
+                })}
               </div>
             )
           )}
