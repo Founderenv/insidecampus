@@ -33,10 +33,32 @@ import { PostDetail } from '@/pages/PostDetail'
 import { EditProfile } from '@/pages/EditProfile'
 import Resources from '@/pages/Resources'
 
+function AuthErrorScreen() {
+  const { error, retry, signOut } = useAuth()
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-ink-950 px-6 gap-6">
+      <div className="card p-8 max-w-sm w-full text-center">
+        <div className="w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+          <svg className="w-7 h-7 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+          </svg>
+        </div>
+        <h2 className="text-lg font-semibold text-white mb-2">Sign-in couldn't be completed</h2>
+        <p className="text-sm text-gray-400 mb-6">{error || 'Something went wrong. Please try again.'}</p>
+        <div className="flex gap-3">
+          <button onClick={retry} className="flex-1 btn-primary py-3 text-sm">Try Again</button>
+          <button onClick={signOut} className="flex-1 btn-secondary py-3 text-sm">Sign Out</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ProtectedRoutes() {
-  const { user, profile, loading } = useAuth()
+  const { user, profile, loading, error } = useAuth()
 
   if (loading) return <LoadingScreen />
+  if (error) return <AuthErrorScreen />
   if (!user) return <Navigate to="/login" replace />
   if (profile && !profile.onboarding_completed) return <Navigate to="/onboarding" replace />
 
@@ -87,13 +109,13 @@ function ProtectedRoutes() {
 }
 
 export default function App() {
-  const { loading } = useAuth()
+  const { loading, error } = useAuth()
 
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/onboarding" element={<Onboarding />} />
-      <Route path="/*" element={loading ? <LoadingScreen /> : <ProtectedRoutes />} />
+      <Route path="/*" element={loading ? <LoadingScreen /> : error ? <AuthErrorScreen /> : <ProtectedRoutes />} />
     </Routes>
   )
 }
