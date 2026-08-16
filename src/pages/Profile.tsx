@@ -1,22 +1,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  Settings as SettingsIcon,
-  Share2,
-  MoreHorizontal,
-  Heart,
-  FolderOpen,
-  Trophy,
-  Bookmark,
-  MapPin,
-  UserPlus,
-  UserCheck,
-  X,
-  MessageCircle,
-  Flag,
-  Ban,
-  ExternalLink,
-  Sparkles,
+  Settings as SettingsIcon, Share2, MoreHorizontal, Heart, FolderOpen,
+  Trophy, Bookmark, UserPlus, UserCheck, X, MessageCircle, Flag, Ban,
+  Sparkles, Plus, ShoppingBag, BookOpen, ExternalLink,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { Avatar } from '@/components/Avatar'
@@ -25,58 +12,43 @@ import { SkeletonProfile, SkeletonList } from '@/components/Skeleton'
 import { EmptyState, ErrorState } from '@/components/States'
 import { Sheet } from '@/components/Sheet'
 import {
-  fetchProfileByUsername,
-  fetchProfilePosts,
-  fetchProfileProjects,
-  fetchProfileAchievements,
-  fetchProfileSkills,
-  fetchSavedPosts,
-  fetchIsFollowing,
-  followUser,
-  unfollowUser,
-  fetchFollowers,
-  fetchFollowing,
-  fetchFollowRequests,
-  acceptFollowRequest,
-  declineFollowRequest,
-  removeFollower,
-  createOrGetConversation,
-  blockUser,
-  reportContent,
-  fetchBranches,
-  fetchUserRank,
+  fetchProfileByUsername, fetchProfilePosts, fetchProfileProjects,
+  fetchProfileAchievements, fetchProfileSkills, fetchSavedPosts,
+  fetchIsFollowing, followUser, unfollowUser, fetchFollowers,
+  fetchFollowing, fetchFollowRequests, acceptFollowRequest,
+  declineFollowRequest, removeFollower, createOrGetConversation,
+  blockUser, reportContent, fetchBranches, fetchUserRank,
+  fetchMarketplace, fetchResources,
 } from '@/lib/data'
 import { formatNumber, yearLabel } from '@/lib/utils'
-import type { Profile, Post, Project, Achievement, Skill, Branch } from '@/types'
+import type { Resource } from '@/lib/data'
+import type { Profile as ProfileType, Post, Project, Achievement, Skill, Branch, MarketplaceListing } from '@/types'
 
-type Tab = 'posts' | 'projects' | 'achievements' | 'saved'
+type Tab = 'posts' | 'learn' | 'marketplace'
 type ListSheet = 'followers' | 'following' | 'requests' | null
-type MoreMenu = 'report' | 'block' | null
 
+const RANK_ICONS = { popular: '👑', smart: '🧠', gamer: '🎮', creator: '🔥' }
 const AURA_EMOJIS: Record<string, string> = {
-  'creative': '🎨',
-  'leader': '👑',
-  'techie': '💻',
-  'gamer': '🎮',
-  'social': '🤝',
-  'sporty': '⚽',
-  'nerd': '🧠',
-  'vibes': '✨',
-  'mystic': '🔮',
+  creative: '🎨', leader: '👑', techie: '💻', gamer: '🎮', social: '🤝',
+  sporty: '⚽', nerd: '🧠', vibes: '✨', mystic: '🔮',
 }
 
-const RANK_ICONS = {
-  popular: '👑',
-  smart: '🧠',
-  gamer: '🎮',
-  creator: '🔥',
-}
+const CREATE_OPTIONS = [
+  { label: 'Post', icon: '📝', path: '/create', identity: 'real' },
+  { label: 'Gossip', icon: '🔥', path: '/gossip', identity: 'hidden', createType: 'gossip' },
+  { label: 'Confession', icon: '🤫', path: '/confessions', identity: 'hidden', createType: 'confession' },
+  { label: 'Learn / Resource', icon: '📚', path: '/resources/new', identity: 'real' },
+  { label: 'Marketplace', icon: '🛒', path: '/marketplace', identity: 'real' },
+  { label: 'Lost Item', icon: '🔍', path: '/lost-found', identity: 'real' },
+  { label: 'Found Item', icon: '✅', path: '/lost-found', identity: 'real' },
+  { label: 'Project', icon: '🚀', path: '/projects', identity: 'real' },
+]
 
 export function Profile() {
   const { username } = useParams()
   const { profile: me, user } = useAuth()
   const navigate = useNavigate()
-  const [profile, setProfile] = useState<Profile | null>(null)
+  const [profile, setProfile] = useState<ProfileType | null>(null)
   const [branch, setBranch] = useState<Branch | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -85,50 +57,38 @@ export function Profile() {
   const [projects, setProjects] = useState<Project[]>([])
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [savedPosts, setSavedPosts] = useState<Post[]>([])
+  const [learnItems, setLearnItems] = useState<Resource[]>([])
+  const [marketItems, setMarketItems] = useState<MarketplaceListing[]>([])
   const [skills, setSkills] = useState<Skill[]>([])
   const [followStatus, setFollowStatus] = useState<'none' | 'following' | 'requested'>('none')
   const [followLoading, setFollowLoading] = useState(false)
   const [tabLoading, setTabLoading] = useState(false)
   const [listSheet, setListSheet] = useState<ListSheet>(null)
-  const [listItems, setListItems] = useState<Profile[]>([])
+  const [listItems, setListItems] = useState<ProfileType[]>([])
   const [listLoading, setListLoading] = useState(false)
   const [followRequests, setFollowRequests] = useState<any[]>([])
-  const [moreMenu, setMoreMenu] = useState<MoreMenu>(null)
+  const [moreMenu, setMoreMenu] = useState<'report' | 'block' | null>(null)
   const [reportReason, setReportReason] = useState('')
   const [reportSubmitting, setReportSubmitting] = useState(false)
   const [blockConfirm, setBlockConfirm] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [ranks, setRanks] = useState<Record<string, number>>({popular: 0, smart: 0, gamer: 0, creator: 0})
+  const [ranks, setRanks] = useState<Record<string, number>>({ popular: 0, smart: 0, gamer: 0, creator: 0 })
+  const [createMenuOpen, setCreateMenuOpen] = useState(false)
 
   const isOwnProfile = !username || username === 'me' || (me && username === me.username)
 
   useEffect(() => {
-    setLoading(true)
-    setError(false)
-    if (isOwnProfile && me) {
-      setProfile(me)
-      setLoading(false)
-    } else if (username) {
-      fetchProfileByUsername(username)
-        .then(p => {
-          if (!p) { setError(true); return }
-          setProfile(p)
-        })
-        .catch(() => setError(true))
-        .finally(() => setLoading(false))
-    } else {
-      setLoading(false)
-    }
+    setLoading(true); setError(false)
+    if (isOwnProfile && me) { setProfile(me); setLoading(false) }
+    else if (username) {
+      fetchProfileByUsername(username).then(p => { if (!p) { setError(true); return }; setProfile(p) })
+        .catch(() => setError(true)).finally(() => setLoading(false))
+    } else { setLoading(false) }
   }, [username, me, isOwnProfile])
 
   useEffect(() => {
     if (profile?.branch_id) {
-      fetchBranches()
-        .then(branches => {
-          const b = branches.find(br => br.id === profile.branch_id)
-          setBranch(b || null)
-        })
-        .catch(() => {})
+      fetchBranches().then(branches => setBranch(branches.find(br => br.id === profile.branch_id) || null)).catch(() => {})
     }
   }, [profile?.branch_id])
 
@@ -137,233 +97,137 @@ export function Profile() {
     const pid = profile.id
     setTabLoading(true)
     Promise.all([
-      fetchProfilePosts(pid),
-      fetchProfileProjects(pid),
-      fetchProfileAchievements(pid),
-      fetchProfileSkills(pid),
-    ])
-      .then(([p, pr, a, s]) => {
-        setPosts(p)
-        setProjects(pr)
-        setAchievements(a)
-        setSkills(s)
-      })
-      .catch(() => {})
-      .finally(() => setTabLoading(false))
-
+      fetchProfilePosts(pid), fetchProfileProjects(pid),
+      fetchProfileAchievements(pid), fetchProfileSkills(pid),
+    ]).then(([p, pr, a, s]) => { setPosts(p); setProjects(pr); setAchievements(a); setSkills(s) })
+      .catch(() => {}).finally(() => setTabLoading(false))
     if (isOwnProfile) {
       fetchSavedPosts(pid).then(setSavedPosts).catch(() => {})
       fetchFollowRequests(pid).then(setFollowRequests).catch(() => {})
     }
-
     if (!isOwnProfile && user) {
       fetchIsFollowing(user.id, pid).then(setFollowStatus).catch(() => {})
     }
   }, [profile, isOwnProfile, user])
 
   useEffect(() => {
-    if (!profile || !isOwnProfile) return
+    if (!profile) return
+    const pid = profile.id
+    if (tab === 'learn') {
+      fetchResources({}).then(items => setLearnItems(items.filter(i => i.uploader_id === pid))).catch(() => {})
+    } else if (tab === 'marketplace') {
+      fetchMarketplace().then(items => setMarketItems(items.filter(i => i.seller_id === pid))).catch(() => {})
+    }
+  }, [tab, profile])
+
+  useEffect(() => {
+    if (!profile) return
     const uid = profile.id
     Promise.all([
-      fetchUserRank(uid, 'popular'),
-      fetchUserRank(uid, 'smart'),
-      fetchUserRank(uid, 'gamer'),
-      fetchUserRank(uid, 'creator'),
-    ]).then(([p, s, g, c]) => setRanks({popular: p, smart: s, gamer: g, creator: c})).catch(() => {})
-  }, [profile, isOwnProfile])
+      fetchUserRank(uid, 'popular'), fetchUserRank(uid, 'smart'),
+      fetchUserRank(uid, 'gamer'), fetchUserRank(uid, 'creator'),
+    ]).then(([p, s, g, c]) => setRanks({ popular: p, smart: s, gamer: g, creator: c })).catch(() => {})
+  }, [profile])
 
   const handleFollow = async () => {
     if (!user || !profile) return
     setFollowLoading(true)
     try {
       if (followStatus === 'following' || followStatus === 'requested') {
-        await unfollowUser(user.id, profile.id)
-        setFollowStatus('none')
+        await unfollowUser(user.id, profile.id); setFollowStatus('none')
       } else {
         const status = await followUser(user.id, profile.id, profile.is_private)
         setFollowStatus(status as 'following' | 'requested')
       }
-    } finally {
-      setFollowLoading(false)
-    }
+    } finally { setFollowLoading(false) }
   }
 
   const handleMessage = async () => {
     if (!user || !profile) return
-    try {
-      const conversationId = await createOrGetConversation(user.id, profile.id)
-      navigate(`/chat/${conversationId}`)
-    } catch {}
+    try { const cid = await createOrGetConversation(user.id, profile.id); navigate(`/chat/${cid}`) } catch {}
   }
 
   const openList = async (type: ListSheet) => {
     if (!profile) return
-    setListSheet(type)
-    setListLoading(true)
+    setListSheet(type); setListLoading(true)
     try {
-      if (type === 'followers') {
-        const items = await fetchFollowers(profile.id)
-        setListItems(items)
-      } else if (type === 'following') {
-        const items = await fetchFollowing(profile.id)
-        setListItems(items)
-      }
-    } catch {} finally {
-      setListLoading(false)
-    }
+      if (type === 'followers') { const items = await fetchFollowers(profile.id); setListItems(items) }
+      else if (type === 'following') { const items = await fetchFollowing(profile.id); setListItems(items) }
+    } catch {} finally { setListLoading(false) }
   }
 
-  const handleAcceptRequest = async (requestId: string) => {
-    try {
-      await acceptFollowRequest(requestId)
-      setFollowRequests(prev => prev.filter((r: any) => r.id !== requestId))
-      if (profile) {
-        setProfile({ ...profile, follower_count: profile.follower_count + 1 })
-      }
-    } catch {}
+  const handleAcceptRequest = async (rid: string) => {
+    try { await acceptFollowRequest(rid); setFollowRequests(prev => prev.filter((r: any) => r.id !== rid)); if (profile) setProfile({ ...profile, follower_count: profile.follower_count + 1 }) } catch {}
   }
-
-  const handleDeclineRequest = async (requestId: string) => {
-    try {
-      await declineFollowRequest(requestId)
-      setFollowRequests(prev => prev.filter((r: any) => r.id !== requestId))
-    } catch {}
-  }
-
-  const handleRemoveFollower = async (followerId: string) => {
-    if (!profile) return
-    try {
-      await removeFollower(followerId, profile.id)
-      setListItems(prev => prev.filter(p => p.id !== followerId))
-      setProfile({ ...profile, follower_count: Math.max(0, profile.follower_count - 1) })
-    } catch {}
+  const handleDeclineRequest = async (rid: string) => {
+    try { await declineFollowRequest(rid); setFollowRequests(prev => prev.filter((r: any) => r.id !== rid)) } catch {}
   }
 
   const handleReport = async () => {
     if (!user || !profile || !reportReason.trim()) return
     setReportSubmitting(true)
-    try {
-      await reportContent(user.id, 'profile', profile.id, reportReason.trim())
-      setMoreMenu(null)
-      setReportReason('')
-    } catch {} finally {
-      setReportSubmitting(false)
-    }
+    try { await reportContent(user.id, 'profile', profile.id, reportReason.trim()); setMoreMenu(null); setReportReason('') } catch {} finally { setReportSubmitting(false) }
   }
-
   const handleBlock = async () => {
     if (!user || !profile) return
-    try {
-      await blockUser(user.id, profile.id)
-      setMoreMenu(null)
-      setBlockConfirm(false)
-    } catch {}
+    try { await blockUser(user.id, profile.id); setMoreMenu(null); setBlockConfirm(false) } catch {}
   }
-
   const handleShare = async () => {
     const url = `${window.location.origin}/profile/${profile?.username}`
-    if (navigator.share) {
-      try { await navigator.share({ title: `${profile?.full_name} on InsideZeal`, url }) } catch {}
-    } else {
-      await navigator.clipboard.writeText(url)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
+    if (navigator.share) { try { await navigator.share({ title: `${profile?.full_name} on InsideZeal`, url }) } catch {} }
+    else { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000) }
   }
 
   if (loading) return <SkeletonProfile />
-  if (error || !profile)
-    return (
-      <ErrorState
-        title="Profile not found"
-        description="This student may not exist or has a private profile."
-        onRetry={() => navigate('/explore')}
-      />
-    )
-
-  const auraBadges = (profile.aura_badges || []).slice(0, 3)
-
-  const tabs: { id: Tab; label: string; icon: typeof Heart }[] = isOwnProfile
-    ? [
-        { id: 'posts', label: 'Posts', icon: Heart },
-        { id: 'projects', label: 'Projects', icon: FolderOpen },
-        { id: 'achievements', label: 'Achievements', icon: Trophy },
-        { id: 'saved', label: 'Saved', icon: Bookmark },
-      ]
-    : [
-        { id: 'posts', label: 'Posts', icon: Heart },
-        { id: 'projects', label: 'Projects', icon: FolderOpen },
-        { id: 'achievements', label: 'Achievements', icon: Trophy },
-      ]
+  if (error || !profile) return <ErrorState title="Profile not found" description="This student may not exist." onRetry={() => navigate('/home')} />
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Profile Header */}
-      <div className="card p-6">
+      <div className="card p-5">
         <div className="flex items-start gap-4">
           <Avatar src={profile.avatar_url} alt={profile.full_name} size="xl" ring />
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-display font-bold text-white truncate">{profile.full_name}</h1>
-            <p className="text-gray-500 text-sm">@{profile.username}</p>
-            <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
-              {profile.show_year && <span>{yearLabel(profile.year)}</span>}
-              {branch && (
-                <>
-                  <span>·</span>
-                  <span>{branch.name}</span>
-                </>
-              )}
-              {profile.instagram && (
-                <>
-                  <span>·</span>
-                  <a
-                    href={`https://instagram.com/${profile.instagram}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-zeal-400 hover:underline"
-                  >
-                    @{profile.instagram}
-                  </a>
-                </>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-display font-bold text-white truncate">{profile.full_name}</h1>
+              {isOwnProfile && (
+                <button onClick={() => setCreateMenuOpen(true)} className="p-1 rounded-lg hover:bg-ink-800 transition-colors">
+                  <Plus className="w-4 h-4 text-gray-400" />
+                </button>
               )}
             </div>
-            {profile.bio && <p className="text-sm text-gray-300 mt-2 whitespace-pre-wrap">{profile.bio}</p>}
+            <p className="text-gray-500 text-sm">@{profile.username}</p>
+            <div className="flex items-center gap-1.5 mt-0.5 text-xs text-gray-500">
+              {branch && <span>{branch.name}</span>}
+              {profile.show_year && branch && <span>·</span>}
+              {profile.show_year && <span>{yearLabel(profile.year)}</span>}
+            </div>
+            {profile.bio && <p className="text-sm text-gray-300 mt-2 whitespace-pre-wrap line-clamp-3">{profile.bio}</p>}
           </div>
         </div>
 
         {/* Stats */}
-        <div className="flex gap-6 mt-5">
+        <div className="flex gap-6 mt-4">
           <button onClick={() => openList('followers')} className="text-left group">
-            <p className="text-lg font-bold text-white group-hover:text-zeal-400 transition-colors">
-              {formatNumber(profile.follower_count)}
-            </p>
-            <p className="text-xs text-gray-500">Followers</p>
+            <p className="text-base font-bold text-white group-hover:text-zeal-400">{formatNumber(profile.follower_count)}</p>
+            <p className="text-[11px] text-gray-500">Followers</p>
           </button>
           <button onClick={() => openList('following')} className="text-left group">
-            <p className="text-lg font-bold text-white group-hover:text-zeal-400 transition-colors">
-              {formatNumber(profile.following_count)}
-            </p>
-            <p className="text-xs text-gray-500">Following</p>
+            <p className="text-base font-bold text-white group-hover:text-zeal-400">{formatNumber(profile.following_count)}</p>
+            <p className="text-[11px] text-gray-500">Following</p>
           </button>
           <div>
-            <p className="text-lg font-bold text-white">{profile.post_count}</p>
-            <p className="text-xs text-gray-500">Posts</p>
-          </div>
-          <div>
-            <p className="text-lg font-bold text-zeal-500">{profile.zeal_score}</p>
-            <p className="text-xs text-gray-500">Zeal Score</p>
+            <p className="text-base font-bold text-white">{profile.post_count}</p>
+            <p className="text-[11px] text-gray-500">Posts</p>
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2 mt-5 flex-wrap">
+        <div className="flex gap-2 mt-4">
           {isOwnProfile ? (
             <>
-              <button onClick={() => navigate('/edit-profile')} className="btn-primary text-sm flex items-center gap-2">
+              <button onClick={() => navigate('/edit-profile')} className="btn-primary text-sm flex-1 flex items-center justify-center gap-2">
                 <SettingsIcon className="w-4 h-4" /> Edit Profile
-              </button>
-              <button onClick={() => navigate('/settings')} className="btn-secondary text-sm flex items-center gap-2">
-                Settings
               </button>
               <button onClick={handleShare} className="btn-secondary text-sm flex items-center gap-2">
                 <Share2 className="w-4 h-4" /> {copied ? 'Copied!' : 'Share'}
@@ -371,22 +235,9 @@ export function Profile() {
             </>
           ) : (
             <>
-              <button
-                onClick={handleFollow}
-                disabled={followLoading}
-                className={
-                  followStatus === 'following' || followStatus === 'requested'
-                    ? 'btn-secondary text-sm'
-                    : 'btn-primary text-sm'
-                }
-              >
-                {followStatus === 'following'
-                  ? 'Following'
-                  : followStatus === 'requested'
-                  ? 'Requested'
-                  : profile.is_private
-                  ? 'Request Follow'
-                  : 'Follow'}
+              <button onClick={handleFollow} disabled={followLoading}
+                className={`${followStatus !== 'none' ? 'btn-secondary' : 'btn-primary'} text-sm flex-1`}>
+                {followStatus === 'following' ? 'Following' : followStatus === 'requested' ? 'Requested' : profile.is_private ? 'Request Follow' : 'Follow'}
               </button>
               <button onClick={handleMessage} className="btn-secondary text-sm flex items-center gap-2">
                 <MessageCircle className="w-4 h-4" /> Message
@@ -399,40 +250,25 @@ export function Profile() {
         </div>
       </div>
 
-      {/* Follow Requests (own profile only) */}
+      {/* Follow Requests */}
       {isOwnProfile && followRequests.length > 0 && (
-        <div className="card p-5">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-2">
-            <UserPlus className="w-4 h-4" /> Follow Requests ({followRequests.length})
+        <div className="card p-4">
+          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-2">
+            <UserPlus className="w-3.5 h-3.5" /> Follow Requests ({followRequests.length})
           </h2>
           <div className="space-y-2">
             {followRequests.map((req: any) => (
-              <div key={req.id} className="flex items-center gap-3 p-2 rounded-xl bg-ink-800 border border-ink-700">
+              <div key={req.id} className="flex items-center gap-2.5 p-2 rounded-xl bg-ink-800 border border-ink-700">
                 <button onClick={() => navigate(`/profile/${req.follower?.username}`)}>
                   <Avatar src={req.follower?.avatar_url} alt={req.follower?.full_name || ''} size="sm" />
                 </button>
                 <div className="flex-1 min-w-0">
-                  <button
-                    onClick={() => navigate(`/profile/${req.follower?.username}`)}
-                    className="font-semibold text-white text-sm hover:underline truncate block"
-                  >
-                    {req.follower?.full_name}
-                  </button>
-                  <p className="text-xs text-gray-500">@{req.follower?.username}</p>
+                  <button onClick={() => navigate(`/profile/${req.follower?.username}`)} className="font-semibold text-white text-sm hover:underline truncate block">{req.follower?.full_name}</button>
+                  <p className="text-[10px] text-gray-500">@{req.follower?.username}</p>
                 </div>
-                <div className="flex gap-1.5">
-                  <button
-                    onClick={() => handleAcceptRequest(req.id)}
-                    className="p-2 rounded-lg bg-zeal-500 text-ink-950 hover:bg-zeal-400 active:scale-95 transition-all"
-                  >
-                    <UserCheck className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDeclineRequest(req.id)}
-                    className="p-2 rounded-lg bg-ink-700 text-gray-400 hover:text-white hover:bg-ink-600 active:scale-95 transition-all"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                <div className="flex gap-1">
+                  <button onClick={() => handleAcceptRequest(req.id)} className="p-1.5 rounded-lg bg-zeal-500 text-ink-950"><UserCheck className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => handleDeclineRequest(req.id)} className="p-1.5 rounded-lg bg-ink-700 text-gray-400"><X className="w-3.5 h-3.5" /></button>
                 </div>
               </div>
             ))}
@@ -441,426 +277,172 @@ export function Profile() {
       )}
 
       {/* Aura Badges */}
-      {auraBadges.length > 0 && (
-        <div className="card p-5">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-zeal-500" /> Aura
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {auraBadges.map(badge => (
-              <span key={badge} className="chip chip-active gap-1.5">
-                <span>{AURA_EMOJIS[badge.toLowerCase()] || '✨'}</span>
-                {badge}
-              </span>
-            ))}
-          </div>
+      {(profile.aura_badges || []).length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {(profile.aura_badges || []).slice(0, 3).map(badge => (
+            <span key={badge} className="chip chip-active text-xs gap-1">
+              <span>{AURA_EMOJIS[badge.toLowerCase()] || '✨'}</span> {badge}
+            </span>
+          ))}
         </div>
       )}
 
-      {/* Campus Rankings */}
-      <div className="card p-5">
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Campus Rankings</h2>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-300 flex items-center gap-2">
-              {RANK_ICONS.popular} Popular
-            </span>
-            <button onClick={() => navigate('/rankings')} className="text-sm font-semibold text-zeal-500 hover:text-zeal-400">
-              #{ranks.popular || '—'} College
+      {/* Live Rankings */}
+      <div className="card p-4">
+        <div className="grid grid-cols-4 gap-2">
+          {Object.entries(RANK_ICONS).map(([type, emoji]) => (
+            <button key={type} onClick={() => navigate('/rankings')}
+              className="flex flex-col items-center gap-0.5 p-2 rounded-xl hover:bg-ink-800 transition-colors">
+              <span className="text-base">{emoji}</span>
+              <span className="text-[10px] font-medium text-gray-400 capitalize">{type}</span>
+              <span className="text-xs font-bold text-zeal-400">#{ranks[type] || '—'}</span>
             </button>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-300 flex items-center gap-2">
-              {RANK_ICONS.smart} Smart
-            </span>
-            <button onClick={() => navigate('/rankings')} className="text-sm font-semibold text-zeal-500 hover:text-zeal-400">
-              #{ranks.smart || '—'} College
-            </button>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-300 flex items-center gap-2">
-              {RANK_ICONS.gamer} Gamer
-            </span>
-            <button onClick={() => navigate('/rankings')} className="text-sm font-semibold text-zeal-500 hover:text-zeal-400">
-              #{ranks.gamer || '—'} College
-            </button>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-300 flex items-center gap-2">
-              {RANK_ICONS.creator} Creator
-            </span>
-            <button onClick={() => navigate('/rankings')} className="text-sm font-semibold text-zeal-500 hover:text-zeal-400">
-              #{ranks.creator || '—'} College
-            </button>
-          </div>
+          ))}
         </div>
       </div>
 
-      {/* Skills */}
-      {skills.length > 0 && (
-        <div className="card p-5">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Skills</h2>
-          <div className="flex flex-wrap gap-2">
-            {skills.map(s => (
-              <span key={s.id} className="chip">
-                {s.name}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Projects Preview */}
-      {projects.length > 0 && tab !== 'projects' && (
-        <div className="card p-5">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-2">
-            <FolderOpen className="w-4 h-4" /> Projects
-          </h2>
-          <div className="space-y-2">
-            {projects.slice(0, 2).map(p => (
-              <div key={p.id} className="p-3 rounded-xl bg-ink-800 border border-ink-700">
-                <p className="font-semibold text-white text-sm">{p.title}</p>
-                <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{p.description}</p>
-                {p.technologies.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {p.technologies.slice(0, 4).map(t => (
-                      <span key={t} className="px-2 py-0.5 rounded-full bg-ink-700 text-gray-400 text-xs">
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Achievements Preview */}
-      {achievements.length > 0 && tab !== 'achievements' && (
-        <div className="card p-5">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-amber-400" /> Achievements
-          </h2>
-          <div className="space-y-2">
-            {achievements.slice(0, 2).map(a => (
-              <div key={a.id} className="flex items-center gap-3 p-2 rounded-xl bg-ink-800 border border-ink-700">
-                <div className="w-10 h-10 rounded-xl bg-zeal-500/10 flex items-center justify-center shrink-0">
-                  <Trophy className="w-5 h-5 text-zeal-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-white text-sm truncate">{a.title}</p>
-                  <p className="text-xs text-gray-500 truncate">{a.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Building Section */}
-      {(profile as any).business_links && (
-        <div className="card p-5">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Building</h2>
-          <p className="text-sm text-gray-300 mb-3">
-            {typeof (profile as any).business_links === 'string'
-              ? (profile as any).business_links
-              : JSON.stringify((profile as any).business_links)}
-          </p>
-          <a
-            href="https://founderenv.in"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-sm font-medium text-zeal-500 hover:text-zeal-400 transition-colors"
-          >
-            <ExternalLink className="w-4 h-4" /> View on Founder.env
-          </a>
-        </div>
-      )}
-
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-ink-800 overflow-x-auto scrollbar-none">
-        {tabs.map(t => {
+      {/* Profile Tabs */}
+      <div className="flex gap-1 border-b border-ink-800">
+        {([
+          { id: 'posts' as Tab, label: 'Posts', icon: Heart },
+          { id: 'learn' as Tab, label: 'Learn', icon: BookOpen },
+          { id: 'marketplace' as Tab, label: 'Marketplace', icon: ShoppingBag },
+        ]).map(t => {
           const Icon = t.icon
           return (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                tab === t.id
-                  ? 'border-zeal-500 text-zeal-500'
-                  : 'border-transparent text-gray-500 hover:text-white'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {t.label}
+            <button key={t.id} onClick={() => setTab(t.id)}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 transition-colors ${
+                tab === t.id ? 'border-zeal-500 text-zeal-500' : 'border-transparent text-gray-500 hover:text-white'
+              }`}>
+              <Icon className="w-3.5 h-3.5" /> {t.label}
             </button>
           )
         })}
       </div>
 
       {/* Tab Content */}
-      {tabLoading ? (
-        <SkeletonList count={3} />
-      ) : tab === 'posts' ? (
-        posts.length > 0 ? (
-          <div className="space-y-3">
-            {posts.map(p => (
-              <PostCard key={p.id} post={p} />
-            ))}
-          </div>
-        ) : (
-          <EmptyState
-            icon={<Heart className="w-7 h-7" />}
-            title="No posts yet"
-            description={isOwnProfile ? 'Share your first post with campus.' : "This student hasn't posted yet."}
-          />
-        )
-      ) : tab === 'projects' ? (
-        projects.length > 0 ? (
-          <div className="space-y-3">
-            {projects.map(p => (
-              <div key={p.id} className="card p-4">
-                <p className="font-semibold text-white">{p.title}</p>
-                <p className="text-sm text-gray-400 mt-1">{p.description}</p>
-                {p.technologies.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-3">
-                    {p.technologies.map(t => (
-                      <span key={t} className="chip text-xs">
-                        {t}
-                      </span>
-                    ))}
+      {tabLoading ? <SkeletonList count={3} /> : (
+        <>
+          {tab === 'posts' && (
+            posts.length > 0 ? (
+              <div className="space-y-3">{posts.map(p => <PostCard key={p.id} post={p} />)}</div>
+            ) : (
+              <EmptyState icon={<Heart className="w-7 h-7" />} title="No posts yet"
+                description={isOwnProfile ? 'Share your first post.' : "This student hasn't posted yet."} />
+            )
+          )}
+          {tab === 'learn' && (
+            learnItems.length > 0 ? (
+              <div className="space-y-2">
+                {learnItems.map(r => (
+                  <div key={r.id} className="card p-3">
+                    <h3 className="text-sm font-semibold text-white">{r.title}</h3>
+                    <p className="text-xs text-gray-400 mt-0.5">{r.subject} · {r.resource_type}</p>
+                    {r.external_url && <a href={r.external_url} target="_blank" rel="noopener noreferrer" className="text-xs text-zeal-400 hover:underline mt-1 inline-block">Open ↗</a>}
                   </div>
-                )}
-                <div className="flex gap-3 mt-3 text-xs text-gray-500">
-                  {p.project_url && (
-                    <a href={p.project_url} target="_blank" rel="noreferrer" className="text-zeal-500 hover:underline">
-                      Live
-                    </a>
-                  )}
-                  {p.github_url && (
-                    <a href={p.github_url} target="_blank" rel="noreferrer" className="text-zeal-500 hover:underline">
-                      GitHub
-                    </a>
-                  )}
-                  {p.looking_for_teammates && <span className="text-amber-400">Looking for teammates</span>}
-                  <span className="ml-auto">❤️ {p.like_count}</span>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : (
-          <EmptyState
-            icon={<FolderOpen className="w-7 h-7" />}
-            title="No projects"
-            description={isOwnProfile ? 'Add your first project to showcase your work.' : 'No projects yet.'}
-          />
-        )
-      ) : tab === 'achievements' ? (
-        achievements.length > 0 ? (
-          <div className="space-y-3">
-            {achievements.map(a => (
-              <div key={a.id} className="card p-4 flex gap-3">
-                <div className="w-12 h-12 rounded-xl bg-zeal-500/10 flex items-center justify-center shrink-0">
-                  <Trophy className="w-6 h-6 text-zeal-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-white text-sm">{a.title}</p>
-                  <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{a.description}</p>
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <span className="text-xs text-gray-600">{a.category}</span>
-                    {a.achievement_date && <span className="text-xs text-gray-600">· {a.achievement_date}</span>}
+            ) : (
+              <EmptyState icon={<BookOpen className="w-7 h-7" />} title="No resources" description="No resources shared yet." />
+            )
+          )}
+          {tab === 'marketplace' && (
+            marketItems.length > 0 ? (
+              <div className="space-y-2">
+                {marketItems.map(m => (
+                  <div key={m.id} className="card p-3 flex items-center gap-3">
+                    {m.image_url ? <img src={m.image_url} alt="" className="w-12 h-12 rounded-xl object-cover shrink-0" />
+                      : <div className="w-12 h-12 rounded-xl bg-ink-700 flex items-center justify-center shrink-0"><ShoppingBag className="w-5 h-5 text-gray-600" /></div>}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-semibold text-white truncate">{m.title}</h3>
+                      <p className="text-xs text-zeal-400 font-bold">₹{m.price}</p>
+                    </div>
+                    {m.is_sold && <span className="text-[10px] text-red-400">Sold</span>}
                   </div>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : (
-          <EmptyState
-            icon={<Trophy className="w-7 h-7" />}
-            title="No achievements"
-            description={
-              isOwnProfile
-                ? 'Showcase your hackathon wins, certifications, and more.'
-                : 'No achievements yet.'
-            }
-          />
-        )
-      ) : tab === 'saved' && isOwnProfile ? (
-        savedPosts.length > 0 ? (
-          <div className="space-y-3">
-            {savedPosts.map(p => (
-              <PostCard key={p.id} post={p} />
-            ))}
-          </div>
-        ) : (
-          <EmptyState
-            icon={<Bookmark className="w-7 h-7" />}
-            title="Nothing saved"
-            description="Bookmark posts to find them here later. Only you can see this."
-          />
-        )
-      ) : null}
+            ) : (
+              <EmptyState icon={<ShoppingBag className="w-7 h-7" />} title="No listings" description="No marketplace items yet." />
+            )
+          )}
+        </>
+      )}
 
-      {/* Followers/Following List Sheet */}
-      <Sheet open={!!listSheet} onClose={() => { setListSheet(null); setListItems([]) }} title={listSheet === 'requests' ? 'Follow Requests' : listSheet ? listSheet.charAt(0).toUpperCase() + listSheet.slice(1) : ''}>
-        {listLoading ? (
-          <SkeletonList count={4} />
-        ) : listSheet === 'requests' ? (
-          followRequests.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-4">No pending requests</p>
-          ) : (
-            <div className="space-y-2">
-              {followRequests.map((req: any) => (
-                <div key={req.id} className="flex items-center gap-3 p-2 rounded-xl bg-ink-800 border border-ink-700">
-                  <button onClick={() => { setListSheet(null); navigate(`/profile/${req.follower?.username}`) }}>
-                    <Avatar src={req.follower?.avatar_url} alt={req.follower?.full_name || ''} size="sm" />
-                  </button>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-white text-sm truncate">{req.follower?.full_name}</p>
-                    <p className="text-xs text-gray-500">@{req.follower?.username}</p>
-                  </div>
-                  <div className="flex gap-1.5">
-                    <button
-                      onClick={() => handleAcceptRequest(req.id)}
-                      className="p-2 rounded-lg bg-zeal-500 text-ink-950 hover:bg-zeal-400 active:scale-95 transition-all"
-                    >
-                      <UserCheck className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeclineRequest(req.id)}
-                      className="p-2 rounded-lg bg-ink-700 text-gray-400 hover:text-white hover:bg-ink-600 active:scale-95 transition-all"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )
-        ) : listItems.length === 0 ? (
+      {/* Create Menu Sheet */}
+      <Sheet open={createMenuOpen} onClose={() => setCreateMenuOpen(false)} title="Create">
+        <div className="space-y-1">
+          {CREATE_OPTIONS.map(opt => (
+            <button
+              key={opt.label}
+              onClick={() => { setCreateMenuOpen(false); navigate(opt.path) }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-300 hover:bg-ink-800 hover:text-white transition-colors text-left"
+            >
+              <span className="text-base">{opt.icon}</span>
+              <div className="flex-1">
+                <p>{opt.label}</p>
+                <p className="text-[10px] text-gray-600">{opt.identity === 'hidden' ? 'Anonymous' : 'Real identity'}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </Sheet>
+
+      {/* Followers/Following Sheet */}
+      <Sheet open={!!listSheet} onClose={() => { setListSheet(null); setListItems([]) }}
+        title={listSheet ? listSheet.charAt(0).toUpperCase() + listSheet.slice(1) : ''}>
+        {listLoading ? <SkeletonList count={4} /> : listItems.length === 0 ? (
           <p className="text-sm text-gray-500 text-center py-4">No {listSheet} yet</p>
         ) : (
           <div className="space-y-2">
-            {listItems.map((p: Profile) => (
+            {listItems.map((p: ProfileType) => (
               <div key={p.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-ink-800 transition-colors">
-                <button
-                  onClick={() => { setListSheet(null); navigate(`/profile/${p.username}`) }}
-                  className="flex items-center gap-3 flex-1 min-w-0"
-                >
+                <button onClick={() => { setListSheet(null); navigate(`/profile/${p.username}`) }} className="flex items-center gap-3 flex-1 min-w-0">
                   <Avatar src={p.avatar_url} alt={p.full_name} size="sm" />
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-white text-sm truncate">{p.full_name}</p>
                     <p className="text-xs text-gray-500">@{p.username}</p>
                   </div>
                 </button>
-                {isOwnProfile && listSheet === 'followers' && user && p.id !== user.id && (
-                  <button
-                    onClick={() => handleRemoveFollower(p.id)}
-                    className="btn-ghost text-xs text-rose-400"
-                  >
-                    Remove
-                  </button>
-                )}
               </div>
             ))}
           </div>
         )}
       </Sheet>
 
-      {/* More Menu (Report/Block) */}
+      {/* More Menu */}
       <Sheet open={!!moreMenu} onClose={() => { setMoreMenu(null); setReportReason(''); setBlockConfirm(false) }} title="More Options">
         {moreMenu === 'report' && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {blockConfirm ? (
               <>
-                <p className="text-sm text-gray-300">
-                  Are you sure you want to block <strong className="text-white">{profile.full_name}</strong>?
-                  They won't be able to see your profile or interact with you.
-                </p>
+                <p className="text-sm text-gray-300">Block <strong className="text-white">{profile.full_name}</strong>?</p>
                 <div className="flex gap-2">
-                  <button onClick={handleBlock} className="flex-1 py-2.5 rounded-xl bg-red-500 text-white font-medium text-sm hover:bg-red-600 transition-colors">
-                    Block
-                  </button>
-                  <button
-                    onClick={() => setBlockConfirm(false)}
-                    className="flex-1 py-2.5 rounded-xl bg-ink-800 border border-ink-700 text-gray-300 font-medium text-sm hover:text-white transition-colors"
-                  >
-                    Cancel
-                  </button>
+                  <button onClick={handleBlock} className="flex-1 py-2.5 rounded-xl bg-red-500 text-white font-medium text-sm">Block</button>
+                  <button onClick={() => setBlockConfirm(false)} className="flex-1 py-2.5 rounded-xl bg-ink-800 border border-ink-700 text-gray-300 font-medium text-sm">Cancel</button>
                 </div>
               </>
             ) : (
               <>
-                <button
-                  onClick={() => setReportReason('spam')}
-                  className={`w-full text-left px-4 py-3 rounded-xl text-sm transition-colors ${
-                    reportReason === 'spam' ? 'bg-zeal-500/10 text-zeal-400 border border-zeal-500/30' : 'bg-ink-800 border border-ink-700 text-gray-300 hover:text-white'
-                  }`}
-                >
-                  Spam or fake content
-                </button>
-                <button
-                  onClick={() => setReportReason('harassment')}
-                  className={`w-full text-left px-4 py-3 rounded-xl text-sm transition-colors ${
-                    reportReason === 'harassment' ? 'bg-zeal-500/10 text-zeal-400 border border-zeal-500/30' : 'bg-ink-800 border border-ink-700 text-gray-300 hover:text-white'
-                  }`}
-                >
-                  Harassment or bullying
-                </button>
-                <button
-                  onClick={() => setReportReason('inappropriate')}
-                  className={`w-full text-left px-4 py-3 rounded-xl text-sm transition-colors ${
-                    reportReason === 'inappropriate' ? 'bg-zeal-500/10 text-zeal-400 border border-zeal-500/30' : 'bg-ink-800 border border-ink-700 text-gray-300 hover:text-white'
-                  }`}
-                >
-                  Inappropriate content
-                </button>
-                <button
-                  onClick={() => setReportReason('other')}
-                  className={`w-full text-left px-4 py-3 rounded-xl text-sm transition-colors ${
-                    reportReason === 'other' ? 'bg-zeal-500/10 text-zeal-400 border border-zeal-500/30' : 'bg-ink-800 border border-ink-700 text-gray-300 hover:text-white'
-                  }`}
-                >
-                  Other
-                </button>
+                {['spam', 'harassment', 'inappropriate', 'other'].map(reason => (
+                  <button key={reason} onClick={() => setReportReason(reason)}
+                    className={`w-full text-left px-4 py-3 rounded-xl text-sm capitalize transition-colors ${
+                      reportReason === reason ? 'bg-zeal-500/10 text-zeal-400 border border-zeal-500/30' : 'bg-ink-800 border border-ink-700 text-gray-300 hover:text-white'
+                    }`}>{reason}</button>
+                ))}
                 {reportReason && (
-                  <button
-                    onClick={handleReport}
-                    disabled={reportSubmitting}
-                    className="w-full py-2.5 rounded-xl bg-zeal-500 text-white font-medium text-sm hover:bg-zeal-600 transition-colors disabled:opacity-50"
-                  >
+                  <button onClick={handleReport} disabled={reportSubmitting}
+                    className="w-full py-2.5 rounded-xl bg-zeal-500 text-white font-medium text-sm disabled:opacity-50">
                     {reportSubmitting ? 'Submitting...' : 'Submit Report'}
                   </button>
                 )}
-                <div className="border-t border-ink-700 pt-4">
-                  <button
-                    onClick={() => setBlockConfirm(true)}
-                    className="w-full text-left px-4 py-3 rounded-xl text-sm text-red-400 bg-ink-800 border border-ink-700 hover:bg-ink-750 transition-colors flex items-center gap-2"
-                  >
+                <div className="border-t border-ink-700 pt-3">
+                  <button onClick={() => setBlockConfirm(true)}
+                    className="w-full text-left px-4 py-3 rounded-xl text-sm text-red-400 bg-ink-800 border border-ink-700 flex items-center gap-2">
                     <Ban className="w-4 h-4" /> Block {profile.full_name}
                   </button>
                 </div>
               </>
             )}
-          </div>
-        )}
-        {moreMenu === 'block' && (
-          <div className="space-y-4">
-            <p className="text-sm text-gray-300">
-              Are you sure you want to block <strong className="text-white">{profile.full_name}</strong>?
-            </p>
-            <div className="flex gap-2">
-              <button onClick={handleBlock} className="flex-1 py-2.5 rounded-xl bg-red-500 text-white font-medium text-sm hover:bg-red-600 transition-colors">
-                Block
-              </button>
-              <button
-                onClick={() => setMoreMenu(null)}
-                className="flex-1 py-2.5 rounded-xl bg-ink-800 border border-ink-700 text-gray-300 font-medium text-sm hover:text-white transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
           </div>
         )}
       </Sheet>

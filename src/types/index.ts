@@ -153,6 +153,7 @@ export interface GossipPost {
   content: string
   image_url: string | null
   category: string
+  branch_id: string | null
   view_count: number
   like_count: number
   comment_count: number

@@ -1,12 +1,11 @@
-import { Home, Compass, Plus, MessageCircle, BookOpen, User } from 'lucide-react'
+import { Home, Flame, BookOpen, Heart, User } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 
 const items = [
   { icon: Home, label: 'Home', path: '/home' },
-  { icon: Compass, label: 'Explore', path: '/explore' },
-  { icon: Plus, label: 'Create', path: '/create', isCenter: true },
-  { icon: MessageCircle, label: 'Chat', path: '/chat' },
-  { icon: BookOpen, label: 'Learn', path: '/resources' },
+  { icon: Flame, label: 'Gossip', path: '/gossip' },
+  { icon: BookOpen, label: 'Learn', path: '/resources-learn' },
+  { icon: Heart, label: 'Chat', path: '/match' },
   { icon: User, label: 'Profile', path: '/profile/me' },
 ]
 
@@ -16,35 +15,22 @@ export function BottomNav() {
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 glass border-t border-ink-700 safe-bottom">
-      <div className="flex items-center justify-around px-2 py-1.5">
+      <div className="flex items-center justify-around px-1 py-1 max-w-lg mx-auto">
         {items.map((item) => {
           const isActive = item.path === '/profile/me'
             ? location.pathname.startsWith('/profile')
             : location.pathname.startsWith(item.path)
           const Icon = item.icon
 
-          if (item.isCenter) {
-            return (
-              <button
-                key={item.label}
-                onClick={() => navigate(item.path)}
-                className="flex items-center justify-center w-12 h-12 rounded-2xl bg-zeal-500 text-ink-950 shadow-glow active:scale-90 transition-transform"
-                aria-label={item.label}
-              >
-                <Icon className="w-6 h-6" strokeWidth={2.5} />
-              </button>
-            )
-          }
-
           return (
             <button
               key={item.label}
               onClick={() => navigate(item.path)}
-              className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-colors"
+              className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors min-w-[52px]"
               aria-label={item.label}
             >
               <Icon
-                className={`w-6 h-6 transition-colors ${isActive ? 'text-zeal-500' : 'text-gray-500'}`}
+                className={`w-5 h-5 transition-colors ${isActive ? 'text-zeal-500' : 'text-gray-500'}`}
                 strokeWidth={isActive ? 2.5 : 2}
               />
               <span className={`text-[10px] font-medium transition-colors ${isActive ? 'text-zeal-500' : 'text-gray-500'}`}>

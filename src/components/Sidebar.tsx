@@ -1,17 +1,21 @@
-import { Home, Compass, Users, MessageCircle, Trophy, Gamepad2, Bell, BookOpen, User, LogOut } from 'lucide-react'
+import { Home, Flame, BookOpen, Heart, User, LayoutGrid, Trophy, Gamepad2, Bell, LogOut } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Logo } from '@/components/Logo'
 import { useAuth } from '@/context/AuthContext'
 import { Avatar } from '@/components/Avatar'
 
-const navItems = [
+const primaryItems = [
   { icon: Home, label: 'Home', path: '/home' },
-  { icon: Compass, label: 'Explore', path: '/explore' },
-  { icon: Users, label: 'Campus', path: '/campus' },
-  { icon: MessageCircle, label: 'Messages', path: '/messages' },
+  { icon: Flame, label: 'Gossip', path: '/gossip' },
+  { icon: BookOpen, label: 'Learn', path: '/resources-learn' },
+  { icon: Heart, label: 'Chat', path: '/match' },
+  { icon: User, label: 'Profile', path: '/profile/me' },
+]
+
+const secondaryItems = [
+  { icon: LayoutGrid, label: 'Campus', path: '/campus' },
   { icon: Trophy, label: 'Rankings', path: '/rankings' },
   { icon: Gamepad2, label: 'Games', path: '/games' },
-  { icon: BookOpen, label: 'Resources', path: '/resources' },
   { icon: Bell, label: 'Notifications', path: '/notifications' },
 ]
 
@@ -21,23 +25,48 @@ export function Sidebar() {
   const { profile, signOut } = useAuth()
 
   return (
-    <aside className="hidden lg:flex flex-col w-64 h-screen sticky top-0 border-r border-ink-800 bg-ink-900 p-5">
-      <button onClick={() => navigate('/home')} className="mb-8">
-        <Logo size="md" />
-      </button>
+    <aside className="hidden lg:flex flex-col w-[220px] h-screen sticky top-0 border-r border-ink-800 bg-ink-900 shrink-0">
+      <div className="p-5 pb-4">
+        <button onClick={() => navigate('/home')}>
+          <Logo size="md" />
+        </button>
+      </div>
 
-      <nav className="flex flex-col gap-1 flex-1">
-        {navItems.map((item) => {
+      <nav className="flex flex-col gap-0.5 flex-1 px-3">
+        {primaryItems.map((item) => {
+          const isActive = item.path === '/profile/me'
+            ? location.pathname.startsWith('/profile')
+            : location.pathname.startsWith(item.path)
+          const Icon = item.icon
+          return (
+            <button
+              key={item.label}
+              onClick={() => navigate(item.path)}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                isActive
+                  ? 'bg-zeal-500/10 text-zeal-500'
+                  : 'text-gray-400 hover:bg-ink-800 hover:text-white'
+              }`}
+            >
+              <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
+              {item.label}
+            </button>
+          )
+        })}
+
+        <div className="my-3 border-t border-ink-800" />
+
+        {secondaryItems.map((item) => {
           const isActive = location.pathname.startsWith(item.path)
           const Icon = item.icon
           return (
             <button
               key={item.label}
               onClick={() => navigate(item.path)}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                 isActive
-                  ? 'bg-zeal-500/10 text-zeal-500 border border-zeal-500/20'
-                  : 'text-gray-400 hover:bg-ink-800 hover:text-white'
+                  ? 'bg-zeal-500/10 text-zeal-500'
+                  : 'text-gray-500 hover:bg-ink-800 hover:text-white'
               }`}
             >
               <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 2} />
@@ -47,11 +76,11 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="border-t border-ink-800 pt-4 space-y-1">
+      <div className="border-t border-ink-800 p-3">
         {profile && (
           <button
             onClick={() => navigate(`/profile/${profile.username || 'me'}`)}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all w-full ${
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all w-full ${
               location.pathname.startsWith('/profile')
                 ? 'bg-zeal-500/10 text-zeal-500'
                 : 'text-gray-400 hover:bg-ink-800 hover:text-white'
@@ -63,7 +92,7 @@ export function Sidebar() {
         )}
         <button
           onClick={signOut}
-          className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-ink-800 hover:text-white transition-all w-full"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-ink-800 hover:text-white transition-all w-full"
         >
           <LogOut className="w-5 h-5" />
           Sign out

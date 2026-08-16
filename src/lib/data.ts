@@ -436,13 +436,18 @@ export async function searchAll(query: string) {
 }
 
 // === Gossip ===
-export async function fetchGossip(category?: string, sortBy: 'latest' | 'trending' = 'latest', limit = 20) {
+export async function fetchGossip(category?: string, sortBy: 'latest' | 'trending' = 'latest', limit = 20, branchId?: string | null) {
   let query = supabase
     .from('gossip_posts')
     .select('*, hidden_profile:safe_hidden_profiles(id, anonymous_code, avatar_seed, avatar_style, nickname, gender, show_gender, reputation)')
     .eq('is_hidden', false)
     .limit(limit)
   if (category && category !== 'all') query = query.eq('category', category)
+  if (branchId === 'campus' || branchId === null || branchId === undefined) {
+    // show campus-only (branch_id IS NULL)
+  } else if (branchId) {
+    query = query.eq('branch_id', branchId)
+  }
   if (sortBy === 'trending') {
     query = query.order('like_count', { ascending: false })
   } else {
@@ -453,10 +458,10 @@ export async function fetchGossip(category?: string, sortBy: 'latest' | 'trendin
   return data as GossipPost[]
 }
 
-export async function createGossipPost(hiddenProfileId: string, content: string, category: string, imageUrl?: string) {
+export async function createGossipPost(hiddenProfileId: string, content: string, category: string, imageUrl?: string, branchId?: string | null) {
   const { data, error } = await supabase
     .from('gossip_posts')
-    .insert({ hidden_profile_id: hiddenProfileId, content, category, image_url: imageUrl || null })
+    .insert({ hidden_profile_id: hiddenProfileId, content, category, image_url: imageUrl || null, branch_id: branchId || null })
     .select('*, hidden_profile:safe_hidden_profiles(id, anonymous_code, avatar_seed, avatar_style, nickname, gender, show_gender, reputation)')
     .maybeSingle()
   if (error) throw error
@@ -1013,6 +1018,22 @@ export async function fetchChatRooms() {
   const { data, error } = await supabase.from('chat_rooms').select('*').eq('is_active', true).order('name')
   if (error) throw error
   return data as ChatRoom[]
+}
+
+export async function fetchCampusRooms(userId: string) {
+  const { data, error } = await supabase.rpc('get_campus_rooms', { p_user_id: userId })
+  if (error) {
+    // Fallback: fetch campus room manually if RPC not applied yet
+    const { data: fallback, error: fbErr } = await supabase
+      .from('chat_rooms')
+      .select('*')
+      .eq('is_active', true)
+      .in('slug', ['campus', 'everyone'])
+      .limit(1)
+    if (fbErr) throw fbErr
+    return (fallback || []) as ChatRoom[]
+  }
+  return (data || []) as ChatRoom[]
 }
 
 export async function fetchChatMessages(roomId: string, limit = 50) {
