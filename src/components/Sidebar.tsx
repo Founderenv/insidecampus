@@ -1,4 +1,4 @@
-import { Home, Flame, BookOpen, Heart, User, LayoutGrid, Trophy, Gamepad2, Bell, LogOut } from 'lucide-react'
+import { Home, Flame, BookOpen, Heart, User, LayoutGrid, MapPin, LogOut } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Logo } from '@/components/Logo'
 import { useAuth } from '@/context/AuthContext'
@@ -14,9 +14,7 @@ const primaryItems = [
 
 const secondaryItems = [
   { icon: LayoutGrid, label: 'Campus', path: '/campus' },
-  { icon: Trophy, label: 'Rankings', path: '/rankings' },
-  { icon: Gamepad2, label: 'Games', path: '/games' },
-  { icon: Bell, label: 'Notifications', path: '/notifications' },
+  { icon: MapPin, label: 'Nearby', path: '/nearby' },
 ]
 
 export function Sidebar() {

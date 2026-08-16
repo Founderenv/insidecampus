@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import type { Profile, Branch, Post, GossipPost, Confession, Teacher, EventItem, Club, Project, Achievement, MarketplaceListing, LostFoundItem, Builder, ChatRoom, ChatMessage, Notification, TeamRequest, Skill, Interest, HiddenProfile, TeacherReview, EventVolunteer, EventCommunityMessage, EventResource } from '@/types'
+import type { Profile, Branch, Post, GossipPost, Confession, Teacher, EventItem, Club, Project, Achievement, MarketplaceListing, LostFoundItem, Builder, ChatRoom, ChatMessage, Notification, TeamRequest, Skill, Interest, HiddenProfile, TeacherReview, EventVolunteer, EventCommunityMessage, EventResource, NearbyPlace, NearbyReview, HousingListing, HousingListingImage } from '@/types'
 
 // ========================================
 // INPUT VALIDATION
@@ -1532,4 +1532,136 @@ export async function fetchResourceSubjects() {
   const { data } = await supabase.from('resources').select('subject').order('subject')
   const subjects = [...new Set(data?.map(d => d.subject) || [])]
   return subjects
+}
+
+// === Nearby Places ===
+
+export async function fetchNearbyPlaces(category?: string, search?: string) {
+  let query = supabase.from('nearby_places').select('*, creator:profiles!nearby_places_created_by_fkey(id, full_name, username, avatar_url)').order('created_at', { ascending: false })
+  if (category && category !== 'All') query = query.eq('category', category)
+  if (search) query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%,location_text.ilike.%${search}%`)
+  const { data, error } = await query
+  if (error) throw error
+  const places = data as NearbyPlace[]
+  const enriched = await Promise.all(places.map(async p => {
+    const { data: reviews } = await supabase.from('nearby_reviews').select('rating').eq('place_id', p.id)
+    const count = reviews?.length || 0
+    const avg = count > 0 ? reviews!.reduce((s, r) => s + r.rating, 0) / count : 0
+    return { ...p, review_count: count, avg_rating: Math.round(avg * 10) / 10 }
+  }))
+  return enriched
+}
+
+export async function fetchNearbyPlaceById(id: string) {
+  const { data, error } = await supabase.from('nearby_places').select('*, creator:profiles!nearby_places_created_by_fkey(id, full_name, username, avatar_url)').eq('id', id).maybeSingle()
+  if (error) throw error
+  return data as NearbyPlace | null
+}
+
+export async function createNearbyPlace(userId: string, name: string, category: string, description?: string, locationText?: string, mapsUrl?: string, priceRange?: string, coverImageUrl?: string) {
+  const { data, error } = await supabase.from('nearby_places').insert({ created_by: userId, name, category, description, location_text: locationText, maps_url: mapsUrl, price_range: priceRange, cover_image_url: coverImageUrl }).select('*, creator:profiles!nearby_places_created_by_fkey(id, full_name, username, avatar_url)').maybeSingle()
+  if (error) throw error
+  return data as NearbyPlace
+}
+
+export async function updateNearbyPlace(placeId: string, userId: string, updates: Partial<{ name: string; description: string; location_text: string; maps_url: string; price_range: string; cover_image_url: string }>) {
+  const { error } = await supabase.from('nearby_places').update(updates).eq('id', placeId).eq('created_by', userId)
+  if (error) throw error
+}
+
+export async function deleteNearbyPlace(placeId: string, userId: string) {
+  const { error } = await supabase.from('nearby_places').delete().eq('id', placeId).eq('created_by', userId)
+  if (error) throw error
+}
+
+// === Nearby Reviews ===
+
+export async function fetchNearbyReviews(placeId: string) {
+  const { data, error } = await supabase.from('nearby_reviews').select('*, user:profiles!nearby_reviews_user_id_fkey(id, full_name, username, avatar_url)').eq('place_id', placeId).order('created_at', { ascending: false })
+  if (error) throw error
+  return data as NearbyReview[]
+}
+
+export async function fetchNearbyReviewStats(placeId: string) {
+  const { data } = await supabase.from('nearby_reviews').select('rating, rating_food, rating_hygiene, rating_price, rating_quantity, rating_cleanliness, rating_safety, rating_location, rating_value').eq('place_id', placeId)
+  if (!data || data.length === 0) return null
+  const count = data.length
+  const avg = (field: string) => {
+    const vals = data.map(r => (r as any)[field]).filter(Boolean)
+    return vals.length > 0 ? Math.round(vals.reduce((s: number, v: number) => s + v, 0) / vals.length * 10) / 10 : null
+  }
+  return { count, avg_rating: Math.round(data.reduce((s, r) => s + r.rating, 0) / count * 10) / 10, avg_food: avg('rating_food'), avg_hygiene: avg('rating_hygiene'), avg_price: avg('rating_price'), avg_quantity: avg('rating_quantity'), avg_cleanliness: avg('rating_cleanliness'), avg_safety: avg('rating_safety'), avg_location: avg('rating_location'), avg_value: avg('rating_value') }
+}
+
+export async function createNearbyReview(userId: string, placeId: string, rating: number, review?: string, dimensionRatings?: Record<string, number | null>) {
+  const payload: any = { place_id: placeId, user_id: userId, rating, review }
+  if (dimensionRatings) Object.assign(payload, dimensionRatings)
+  const { data, error } = await supabase.from('nearby_reviews').upsert(payload, { onConflict: 'place_id,user_id' }).select('*, user:profiles!nearby_reviews_user_id_fkey(id, full_name, username, avatar_url)').maybeSingle()
+  if (error) throw error
+  return data as NearbyReview
+}
+
+export async function deleteNearbyReview(reviewId: string, userId: string) {
+  const { error } = await supabase.from('nearby_reviews').delete().eq('id', reviewId).eq('user_id', userId)
+  if (error) throw error
+}
+
+// === Housing Listings ===
+
+export async function fetchHousingListings(listingType?: string) {
+  let query = supabase.from('housing_listings').select('*, owner:profiles!housing_listings_owner_id_fkey(id, full_name, username, avatar_url)').order('created_at', { ascending: false })
+  if (listingType && listingType !== 'All') query = query.eq('listing_type', listingType)
+  const { data, error } = await query
+  if (error) throw error
+  return data as HousingListing[]
+}
+
+export async function fetchHousingListingById(id: string) {
+  const { data, error } = await supabase.from('housing_listings').select('*, owner:profiles!housing_listings_owner_id_fkey(id, full_name, username, avatar_url, phone)').eq('id', id).maybeSingle()
+  if (error) throw error
+  if (!data) return null
+  const { data: images } = await supabase.from('housing_listing_images').select('*').eq('listing_id', id).order('sort_order')
+  return { ...data, images: (images || []) as HousingListingImage[] } as HousingListing
+}
+
+export async function createHousingListing(userId: string, listingType: string, title: string, description?: string, rent?: number, deposit?: number, sharingType?: string, locationText?: string, mapsUrl?: string, whatsappNumber?: string, phoneNumber?: string) {
+  const { data, error } = await supabase.from('housing_listings').insert({ owner_id: userId, listing_type: listingType, title, description, rent, deposit, sharing_type: sharingType, location_text: locationText, maps_url: mapsUrl, whatsapp_number: whatsappNumber, phone_number: phoneNumber }).select('*, owner:profiles!housing_listings_owner_id_fkey(id, full_name, username, avatar_url)').maybeSingle()
+  if (error) throw error
+  return data as HousingListing
+}
+
+export async function updateHousingListingAvailability(listingId: string, userId: string, status: string) {
+  const { error } = await supabase.from('housing_listings').update({ availability_status: status, updated_at: new Date().toISOString() }).eq('id', listingId).eq('owner_id', userId)
+  if (error) throw error
+}
+
+export async function deleteHousingListing(listingId: string, userId: string) {
+  const { error } = await supabase.from('housing_listings').delete().eq('id', listingId).eq('owner_id', userId)
+  if (error) throw error
+}
+
+export async function addHousingListingImage(listingId: string, imageUrl: string, sortOrder: number) {
+  const { data, error } = await supabase.from('housing_listing_images').insert({ listing_id: listingId, image_url: imageUrl, sort_order: sortOrder }).select().maybeSingle()
+  if (error) throw error
+  return data as HousingListingImage
+}
+
+export async function deleteHousingListingImage(imageId: string) {
+  const { error } = await supabase.from('housing_listing_images').delete().eq('id', imageId)
+  if (error) throw error
+}
+
+export async function toggleHousingInterest(listingId: string, userId: string) {
+  const { data: existing } = await supabase.from('housing_interests').select('id').eq('listing_id', listingId).eq('user_id', userId).maybeSingle()
+  if (existing) {
+    await supabase.from('housing_interests').delete().eq('id', existing.id)
+    return false
+  }
+  await supabase.from('housing_interests').insert({ listing_id: listingId, user_id: userId })
+  return true
+}
+
+export async function fetchHousingInterestIds(userId: string) {
+  const { data } = await supabase.from('housing_interests').select('listing_id').eq('user_id', userId)
+  return new Set(data?.map(d => d.listing_id) || [])
 }

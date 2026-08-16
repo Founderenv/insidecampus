@@ -393,14 +393,10 @@ export function Home() {
       <Sheet open={menuOpen} onClose={() => setMenuOpen(false)} title="Menu">
         <div className="space-y-1">
           {[
+            { label: 'Nearby', path: '/nearby', icon: '📍' },
             { label: 'Projects', path: '/projects', icon: '🚀' },
             { label: 'Clubs', path: '/clubs', icon: '🎯' },
-            { label: 'Smart League', path: '/smart', icon: '🧠' },
-            { label: 'Games', path: '/games', icon: '🎮' },
-            { label: 'Rankings', path: '/rankings', icon: '🏆' },
             { label: 'Builders', path: '/builders', icon: '🔧' },
-            { label: 'Notifications', path: '/notifications', icon: '🔔' },
-            { label: 'Settings', path: '/settings', icon: '⚙️' },
           ].map(item => (
             <button
               key={item.path}

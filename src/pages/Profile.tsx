@@ -190,9 +190,14 @@ export function Profile() {
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-display font-bold text-white truncate">{profile.full_name}</h1>
               {isOwnProfile && (
-                <button onClick={() => setCreateMenuOpen(true)} className="p-1 rounded-lg hover:bg-ink-800 transition-colors">
-                  <Plus className="w-4 h-4 text-gray-400" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => navigate('/settings')} className="p-1 rounded-lg hover:bg-ink-800 transition-colors">
+                    <SettingsIcon className="w-4 h-4 text-gray-400" />
+                  </button>
+                  <button onClick={() => setCreateMenuOpen(true)} className="p-1 rounded-lg hover:bg-ink-800 transition-colors">
+                    <Plus className="w-4 h-4 text-gray-400" />
+                  </button>
+                </div>
               )}
             </div>
             <p className="text-gray-500 text-sm">@{profile.username}</p>

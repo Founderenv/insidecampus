@@ -25,6 +25,7 @@ import { Rankings } from '@/pages/Rankings'
 import { Projects } from '@/pages/Projects'
 import { Marketplace } from '@/pages/Marketplace'
 import { LostFound } from '@/pages/LostFound'
+import { Nearby } from '@/pages/Nearby'
 import { Builders } from '@/pages/Builders'
 import { Notifications } from '@/pages/Notifications'
 import { Create } from '@/pages/Create'
@@ -88,6 +89,9 @@ function ProtectedRoutes() {
               <Route path="/projects" element={<Projects />} />
               <Route path="/marketplace" element={<Marketplace />} />
               <Route path="/lost-found" element={<LostFound />} />
+              <Route path="/nearby" element={<Nearby />} />
+              <Route path="/nearby/:id" element={<Nearby />} />
+              <Route path="/nearby/l/:lid" element={<Nearby />} />
               <Route path="/builders" element={<Builders />} />
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/create" element={<Create />} />

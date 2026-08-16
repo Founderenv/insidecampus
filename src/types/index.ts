@@ -375,3 +375,73 @@ export interface GameScore {
   total_xp: number
   plays: number
 }
+
+export interface NearbyPlace {
+  id: string
+  name: string
+  category: string
+  description: string | null
+  location_text: string | null
+  maps_url: string | null
+  price_range: string | null
+  cover_image_url: string | null
+  created_by: string
+  created_at: string
+  creator?: Profile
+  review_count?: number
+  avg_rating?: number
+}
+
+export interface NearbyReview {
+  id: string
+  place_id: string
+  user_id: string
+  rating: number
+  rating_food: number | null
+  rating_hygiene: number | null
+  rating_price: number | null
+  rating_quantity: number | null
+  rating_cleanliness: number | null
+  rating_safety: number | null
+  rating_location: number | null
+  rating_value: number | null
+  review: string | null
+  created_at: string
+  user?: Profile
+}
+
+export interface HousingListing {
+  id: string
+  owner_id: string
+  listing_type: string
+  title: string
+  description: string | null
+  rent: number | null
+  deposit: number | null
+  sharing_type: string | null
+  location_text: string | null
+  maps_url: string | null
+  availability_status: string
+  whatsapp_number: string | null
+  phone_number: string | null
+  created_at: string
+  updated_at: string
+  owner?: Profile
+  images?: HousingListingImage[]
+  is_interested?: boolean
+}
+
+export interface HousingListingImage {
+  id: string
+  listing_id: string
+  image_url: string
+  sort_order: number
+  created_at: string
+}
+
+export interface HousingInterest {
+  id: string
+  listing_id: string
+  user_id: string
+  created_at: string
+}
