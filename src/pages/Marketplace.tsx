@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
-import { ShoppingBag, Plus, Bookmark, BookmarkCheck, Tag } from 'lucide-react'
+import { ShoppingBag, Plus, Bookmark, BookmarkCheck, Tag, Image as ImageIcon, X } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { Avatar } from '@/components/Avatar'
 import { SkeletonList } from '@/components/Skeleton'
 import { EmptyState, ErrorState } from '@/components/States'
 import { Sheet } from '@/components/Sheet'
-import { fetchMarketplace, createMarketplaceListing, toggleMarketplaceSave, fetchMarketplaceSaveIds, markListingSold } from '@/lib/data'
+import { fetchMarketplace, createMarketplaceListing, toggleMarketplaceSave, fetchMarketplaceSaveIds, markListingSold, uploadItemImage, validateImageFile } from '@/lib/data'
 import { formatNumber } from '@/lib/utils'
 import type { MarketplaceListing } from '@/types'
 
@@ -35,6 +35,9 @@ export function Marketplace() {
   const [formPrice, setFormPrice] = useState('')
   const [formCondition, setFormCondition] = useState('good')
   const [formCategory, setFormCategory] = useState('Other')
+  const [formImage, setFormImage] = useState<File | null>(null)
+  const [formImagePreview, setFormImagePreview] = useState<string | null>(null)
+  const [imageError, setImageError] = useState<string | null>(null)
 
   const load = async (cat: string) => {
     setLoading(true)
@@ -60,12 +63,37 @@ export function Marketplace() {
     setFormPrice('')
     setFormCondition('good')
     setFormCategory('Other')
+    setFormImage(null)
+    if (formImagePreview) URL.revokeObjectURL(formImagePreview)
+    setFormImagePreview(null)
+    setImageError(null)
+  }
+
+  const handleImagePick = () => {
+    const inp = document.createElement('input')
+    inp.type = 'file'
+    inp.accept = 'image/jpeg,image/png,image/webp'
+    inp.onchange = (e) => {
+      const f = (e.target as HTMLInputElement).files?.[0]
+      if (f) {
+        const v = validateImageFile(f)
+        if (!v.valid) { setImageError(v.error!); return }
+        setFormImage(f)
+        setFormImagePreview(URL.createObjectURL(f))
+        setImageError(null)
+      }
+    }
+    inp.click()
   }
 
   const handleSubmit = async () => {
     if (!user || !formTitle.trim() || !formDesc.trim() || !formPrice) return
     setSubmitting(true)
     try {
+      let imageUrl: string | undefined
+      if (formImage) {
+        imageUrl = await uploadItemImage(user.id, formImage)
+      }
       const listing = await createMarketplaceListing(
         user.id,
         formTitle.trim(),
@@ -73,6 +101,7 @@ export function Marketplace() {
         Number(formPrice),
         formCondition,
         formCategory.toLowerCase(),
+        imageUrl,
       )
       setListings(prev => [listing, ...prev])
       resetForm()
@@ -246,6 +275,29 @@ export function Marketplace() {
 
       <Sheet open={sheetOpen} onClose={() => { setSheetOpen(false); resetForm() }} title="New Listing">
         <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-1.5">Photo (optional)</label>
+            {formImagePreview ? (
+              <div className="relative">
+                <img src={formImagePreview} alt="Preview" className="w-full h-40 object-cover rounded-xl" />
+                <button
+                  onClick={() => { setFormImage(null); URL.revokeObjectURL(formImagePreview); setFormImagePreview(null) }}
+                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 flex items-center justify-center text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleImagePick}
+                className="w-full py-6 rounded-xl border-2 border-dashed border-ink-600 hover:border-ink-500 flex flex-col items-center gap-2 transition-colors"
+              >
+                <ImageIcon className="w-6 h-6 text-gray-500" />
+                <span className="text-xs text-gray-500">Add a photo of the item</span>
+              </button>
+            )}
+            {imageError && <p className="text-xs text-rose-400 mt-1">{imageError}</p>}
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-1.5">Title</label>
             <input

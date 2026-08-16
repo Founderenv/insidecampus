@@ -138,13 +138,42 @@ export interface EventItem {
   title: string
   description: string
   poster_url: string | null
+  banner_url: string | null
   organizer: string | null
   club_id: string | null
   event_date: string
+  start_time: string | null
+  end_time: string | null
   end_date: string | null
   venue: string | null
   category: string | null
   interested_count: number
+  registration_url: string | null
+  instagram_url: string | null
+  whatsapp_url: string | null
+  contact_number: string | null
+  created_by: string | null
+}
+
+export interface EventCommunityMessage {
+  id: string
+  event_id: string
+  author_id: string
+  content: string
+  created_at: string
+  author?: Profile
+}
+
+export interface EventResource {
+  id: string
+  event_id: string
+  uploader_id: string
+  title: string
+  description: string
+  resource_url: string
+  resource_type: string
+  created_at: string
+  uploader?: Profile
 }
 
 export interface GossipPost {

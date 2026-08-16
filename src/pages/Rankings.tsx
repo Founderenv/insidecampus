@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react'
-import { Trophy, Crown, Brain, Gamepad2, Flame } from 'lucide-react'
+import { Trophy, Crown, Flame } from 'lucide-react'
 import { Avatar } from '@/components/Avatar'
 import { SkeletonList } from '@/components/Skeleton'
 import { EmptyState } from '@/components/States'
-import { fetchRankings, fetchBranches } from '@/lib/data'
+import { fetchRankings, fetchBranches, fetchCreatorRankings } from '@/lib/data'
 import { formatNumber } from '@/lib/utils'
 import type { Profile, Branch } from '@/types'
 
 const tabs = [
   { id: 'popular' as const, label: 'Popular', icon: '👑', lucide: Crown, color: 'text-yellow-400' },
-  { id: 'smart' as const, label: 'Smart', icon: '🧠', lucide: Brain, color: 'text-blue-400' },
-  { id: 'gamer' as const, label: 'Gamer', icon: '🎮', lucide: Gamepad2, color: 'text-purple-400' },
   { id: 'creator' as const, label: 'Creator', icon: '🔥', lucide: Flame, color: 'text-orange-400' },
 ]
 
@@ -19,9 +17,7 @@ const rankColors = ['text-yellow-400', 'text-gray-300', 'text-orange-400']
 function getScoreLabel(type: string) {
   switch (type) {
     case 'popular': return 'followers'
-    case 'smart': return 'smart'
-    case 'gamer': return 'XP'
-    case 'creator': return 'posts'
+    case 'creator': return 'likes'
     default: return ''
   }
 }
@@ -29,9 +25,7 @@ function getScoreLabel(type: string) {
 function getScoreValue(p: Profile, type: string) {
   switch (type) {
     case 'popular': return p.follower_count
-    case 'smart': return p.smart_score
-    case 'gamer': return p.game_xp
-    case 'creator': return p.post_count
+    case 'creator': return (p as any).total_likes || p.post_count
     default: return 0
   }
 }
@@ -40,7 +34,7 @@ export function Rankings() {
   const [leaders, setLeaders] = useState<Profile[]>([])
   const [branches, setBranches] = useState<Branch[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'popular' | 'smart' | 'gamer' | 'creator'>('popular')
+  const [activeTab, setActiveTab] = useState<'popular' | 'creator'>('popular')
   const [branchFilter, setBranchFilter] = useState<string | null>(null)
 
   useEffect(() => {
@@ -49,10 +43,17 @@ export function Rankings() {
 
   useEffect(() => {
     setLoading(true)
-    fetchRankings(activeTab, branchFilter || undefined, 20)
-      .then(setLeaders)
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    if (activeTab === 'creator') {
+      fetchCreatorRankings(branchFilter || undefined, 20)
+        .then(setLeaders)
+        .catch(() => {})
+        .finally(() => setLoading(false))
+    } else {
+      fetchRankings(activeTab, branchFilter || undefined, 20)
+        .then(setLeaders)
+        .catch(() => {})
+        .finally(() => setLoading(false))
+    }
   }, [activeTab, branchFilter])
 
   return (
@@ -98,29 +99,6 @@ export function Rankings() {
           </button>
         ))}
       </div>
-
-      {/* Brain of the month - only for Smart tab */}
-      {activeTab === 'smart' && (
-        <div className="card p-5 bg-gradient-to-r from-zeal-500/10 to-transparent border-zeal-500/20">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-2xl">🏆</span>
-            <div>
-              <p className="font-bold text-white">Brain of the Month</p>
-              <p className="text-xs text-gray-500">Top Smart Score this month</p>
-            </div>
-          </div>
-          {!loading && leaders.length > 0 && (
-            <div className="flex items-center gap-3">
-              <Avatar src={leaders[0].avatar_url} alt={leaders[0].full_name} size="md" ring />
-              <div>
-                <p className="font-semibold text-white text-sm">{leaders[0].full_name}</p>
-                <p className="text-xs text-gray-500">@{leaders[0].username}</p>
-                <p className="text-xs text-zeal-500">{leaders[0].smart_score} Smart Score</p>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {loading ? (
         <SkeletonList count={5} />

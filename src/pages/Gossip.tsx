@@ -224,8 +224,23 @@ export function Gossip() {
     setSending(true)
     const content = input.trim()
     setInput('')
-    try { await sendChatMessage(activeRoom.id, user.id, content) }
-    catch { setInput(content) }
+    try {
+      const sent = await sendChatMessage(activeRoom.id, user.id, content)
+      // Optimistically add the message immediately so it doesn't disappear
+      if (sent) {
+        setMessages(prev => {
+          if (prev.some(m => m.id === sent.id)) return prev
+          return [...prev, {
+            id: sent.id, author_id: sent.author_id, content: sent.content, created_at: sent.created_at,
+            message_type: sent.message_type || 'text',
+            attachment_path: sent.attachment_path, attachment_name: sent.attachment_name,
+            attachment_mime: sent.attachment_mime, attachment_size: sent.attachment_size,
+            attachment_duration: sent.attachment_duration,
+            author: sent.author ? { full_name: sent.author.full_name, avatar_url: sent.author.avatar_url, username: sent.author.username } : undefined,
+          }]
+        })
+      }
+    } catch { setInput(content) }
     finally { setSending(false) }
   }
 
@@ -383,7 +398,7 @@ export function Gossip() {
     const hasAttachment = imgFile || docFile || audFile || recordBlob
 
     return (
-      <div className="flex flex-col" style={{ height: 'calc(100vh - 8rem)' }}>
+      <div className="flex flex-col" style={{ height: 'calc(100dvh - 8rem)', minHeight: 0 }}>
         {/* ---- Chat Header ---- */}
         <div className="flex items-center gap-3 pb-3 border-b border-ink-800 shrink-0">
           <button onClick={() => { setActiveRoom(null); clearAttachmentState() }} className="text-gray-400 hover:text-white p-1">

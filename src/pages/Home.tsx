@@ -28,8 +28,6 @@ const HOME_TABS: { id: HomeTab; label: string }[] = [
 
 const RANK_LABELS: Record<string, { emoji: string; label: string }> = {
   popular: { emoji: '👑', label: 'Popular' },
-  smart: { emoji: '🧠', label: 'Smart' },
-  gamer: { emoji: '🎮', label: 'Gamer' },
   creator: { emoji: '🔥', label: 'Creator' },
 }
 
@@ -65,8 +63,6 @@ export function Home() {
       fetchBranches().catch(() => []),
       Promise.all([
         fetchRankings('popular', undefined, 1).then(r => r[0] ? { profile: r[0], category: 'Popular', emoji: '👑', rank: 1 } : null).catch(() => null),
-        fetchRankings('smart', undefined, 1).then(r => r[0] ? { profile: r[0], category: 'Smart', emoji: '🧠', rank: 1 } : null).catch(() => null),
-        fetchRankings('gamer', undefined, 1).then(r => r[0] ? { profile: r[0], category: 'Gamer', emoji: '🎮', rank: 1 } : null).catch(() => null),
         fetchRankings('creator', undefined, 1).then(r => r[0] ? { profile: r[0], category: 'Creator', emoji: '🔥', rank: 1 } : null).catch(() => null),
       ]).then(results => results.filter(Boolean)),
     ]).then(([p, e, likedIds, savedIds, br, rankers]) => {
@@ -371,8 +367,6 @@ export function Home() {
       <Sheet open={menuOpen} onClose={() => setMenuOpen(false)} title="Menu">
         <div className="space-y-1">
           {[
-            { label: 'Campus Chat', path: '/campus', icon: '💬' },
-            { label: 'Events', path: '/events', icon: '📅' },
             { label: 'Projects', path: '/projects', icon: '🚀' },
             { label: 'Clubs', path: '/clubs', icon: '🎯' },
             { label: 'Smart League', path: '/smart', icon: '🧠' },

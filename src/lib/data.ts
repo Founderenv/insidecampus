@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import type { Profile, Branch, Post, GossipPost, Confession, Teacher, EventItem, Club, Project, Achievement, MarketplaceListing, LostFoundItem, Builder, ChatRoom, ChatMessage, Notification, TeamRequest, Skill, Interest, HiddenProfile, TeacherReview } from '@/types'
+import type { Profile, Branch, Post, GossipPost, Confession, Teacher, EventItem, Club, Project, Achievement, MarketplaceListing, LostFoundItem, Builder, ChatRoom, ChatMessage, Notification, TeamRequest, Skill, Interest, HiddenProfile, TeacherReview, EventCommunityMessage, EventResource } from '@/types'
 
 // ========================================
 // INPUT VALIDATION
@@ -934,6 +934,46 @@ export async function fetchRankings(type: 'popular' | 'smart' | 'gamer' | 'creat
 }
 
 // === Events ===
+export async function createEvent(
+  createdBy: string,
+  title: string,
+  description: string,
+  eventDate: string,
+  venue?: string,
+  category?: string,
+  organizer?: string,
+  bannerUrl?: string,
+  startTime?: string,
+  endTime?: string,
+  registrationUrl?: string,
+  instagramUrl?: string,
+  whatsappUrl?: string,
+  contactNumber?: string,
+) {
+  const { data, error } = await supabase
+    .from('events')
+    .insert({
+      title,
+      description,
+      event_date: eventDate,
+      venue: venue || null,
+      category: category || null,
+      organizer: organizer || null,
+      banner_url: bannerUrl || null,
+      start_time: startTime || null,
+      end_time: endTime || null,
+      registration_url: registrationUrl || null,
+      instagram_url: instagramUrl || null,
+      whatsapp_url: whatsappUrl || null,
+      contact_number: contactNumber || null,
+      created_by: createdBy,
+    })
+    .select()
+    .maybeSingle()
+  if (error) throw error
+  return data as EventItem
+}
+
 export async function fetchEvents(filter?: string) {
   let query = supabase.from('events').select('*').order('event_date', { ascending: true })
   const now = new Date().toISOString()
@@ -949,6 +989,75 @@ export async function fetchEvents(filter?: string) {
   const { data, error } = await query
   if (error) throw error
   return data as EventItem[]
+}
+
+export async function fetchEventById(eventId: string) {
+  const { data, error } = await supabase.from('events').select('*').eq('id', eventId).maybeSingle()
+  if (error) throw error
+  return data as EventItem | null
+}
+
+// === Event Community Messages ===
+export async function fetchEventCommunityMessages(eventId: string, limit = 50) {
+  const { data, error } = await supabase
+    .from('event_community_messages')
+    .select('*, author:profiles!event_community_messages_author_id_fkey(*)')
+    .eq('event_id', eventId)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  if (error) throw error
+  return (data as EventCommunityMessage[]).reverse()
+}
+
+export async function sendEventCommunityMessage(eventId: string, authorId: string, content: string) {
+  const { data, error } = await supabase
+    .from('event_community_messages')
+    .insert({ event_id: eventId, author_id: authorId, content })
+    .select('*, author:profiles!event_community_messages_author_id_fkey(*)')
+    .maybeSingle()
+  if (error) throw error
+  return data as EventCommunityMessage
+}
+
+// === Event Resources ===
+export async function fetchEventResources(eventId: string) {
+  const { data, error } = await supabase
+    .from('event_resources')
+    .select('*, uploader:profiles!event_resources_uploader_id_fkey(*)')
+    .eq('event_id', eventId)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data as EventResource[]
+}
+
+export async function createEventResource(eventId: string, uploaderId: string, title: string, description: string, resourceUrl: string, resourceType = 'link') {
+  const { data, error } = await supabase
+    .from('event_resources')
+    .insert({ event_id: eventId, uploader_id: uploaderId, title, description, resource_url: resourceUrl, resource_type: resourceType })
+    .select('*, uploader:profiles!event_resources_uploader_id_fkey(*)')
+    .maybeSingle()
+  if (error) throw error
+  return data as EventResource
+}
+
+export async function deleteEventResource(resourceId: string, uploaderId: string) {
+  const { error } = await supabase.from('event_resources').delete().eq('id', resourceId).eq('uploader_id', uploaderId)
+  if (error) throw error
+}
+
+// === Creator Rankings (by total post likes) ===
+export async function fetchCreatorRankings(branchId?: string, limit = 20) {
+  const { data, error } = await supabase
+    .rpc('get_creator_rankings', { p_branch_id: branchId || null, p_limit: limit })
+  if (error) {
+    // Fallback: fetch profiles ordered by post_count
+    let query = supabase.from('profiles').select('*').eq('is_banned', false).order('post_count', { ascending: false }).limit(limit)
+    if (branchId) query = query.eq('branch_id', branchId)
+    const { data: fallback, error: fbErr } = await query
+    if (fbErr) throw fbErr
+    return fallback as Profile[]
+  }
+  return (data || []) as Profile[]
 }
 
 // === Clubs ===
@@ -993,6 +1102,18 @@ export async function fetchMarketplace(category?: string) {
   const { data, error } = await query
   if (error) throw error
   return data as MarketplaceListing[]
+}
+
+// === Item Image Upload (Lost & Found / Marketplace) ===
+export async function uploadItemImage(userId: string, file: File): Promise<string> {
+  const validation = validateImageFile(file)
+  if (!validation.valid) throw new Error(validation.error)
+  const ext = file.name.split('.').pop() || 'jpg'
+  const path = `${userId}/item-${Date.now()}.${ext}`
+  const { error } = await supabase.storage.from('post-images').upload(path, file)
+  if (error) throw error
+  const { data } = supabase.storage.from('post-images').getPublicUrl(path)
+  return data.publicUrl
 }
 
 // === Lost & Found ===
