@@ -25,7 +25,7 @@ function getScoreLabel(type: string) {
 function getScoreValue(p: Profile, type: string) {
   switch (type) {
     case 'popular': return p.follower_count
-    case 'creator': return (p as any).total_likes || p.post_count
+    case 'creator': return (p as Profile & { total_likes?: number }).total_likes ?? p.post_count
     default: return 0
   }
 }
@@ -62,7 +62,7 @@ export function Rankings() {
         <h1 className="text-3xl font-display font-bold text-white mb-1 flex items-center gap-2">
           <Trophy className="w-7 h-7 text-amber-400" /> Campus Rankings
         </h1>
-        <p className="text-gray-500 text-sm">Compete across popularity, smarts, gaming, and creativity.</p>
+        <p className="text-gray-500 text-sm">Top students by followers and post likes.</p>
       </div>
 
       {/* Tabs */}

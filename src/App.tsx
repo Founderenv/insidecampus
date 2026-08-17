@@ -20,14 +20,11 @@ import { Clubs } from '@/pages/Clubs'
 import { Chat } from '@/pages/Chat'
 import { Messages } from '@/pages/Messages'
 import { Match } from '@/pages/Match'
-import { Games } from '@/pages/Games'
-import { Smart } from '@/pages/Smart'
 import { Rankings } from '@/pages/Rankings'
 import { Projects } from '@/pages/Projects'
 import { Marketplace } from '@/pages/Marketplace'
 import { LostFound } from '@/pages/LostFound'
 import { Nearby } from '@/pages/Nearby'
-import { Builders } from '@/pages/Builders'
 import { Notifications } from '@/pages/Notifications'
 import { Requests } from '@/pages/Requests'
 import { Create } from '@/pages/Create'
@@ -83,19 +80,16 @@ function ProtectedRoutes() {
               <Route path="/events/:id" element={<Events />} />
               <Route path="/chat" element={<Chat />} />
               <Route path="/messages" element={<Messages />} />
-              <Route path="/match" element={<Match />} />
-              <Route path="/games" element={<Games />} />
-              <Route path="/smart" element={<Smart />} />
-              <Route path="/rankings" element={<Rankings />} />
+<Route path="/match" element={<Match />} />
+<Route path="/rankings" element={<Rankings />} />
               <Route path="/clubs" element={<Clubs />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/marketplace" element={<Marketplace />} />
               <Route path="/lost-found" element={<LostFound />} />
               <Route path="/nearby" element={<Nearby />} />
               <Route path="/nearby/:id" element={<Nearby />} />
-              <Route path="/nearby/l/:lid" element={<Nearby />} />
-              <Route path="/builders" element={<Builders />} />
-              <Route path="/notifications" element={<Notifications />} />
+<Route path="/nearby/l/:lid" element={<Nearby />} />
+<Route path="/notifications" element={<Notifications />} />
               <Route path="/requests" element={<Requests />} />
               <Route path="/create" element={<Create />} />
               <Route path="/post/:id" element={<PostDetail />} />

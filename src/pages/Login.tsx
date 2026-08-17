@@ -31,7 +31,7 @@ export function Login() {
             Your campus. Your people. Your vibe.
           </h1>
           <p className="text-gray-400 text-sm mb-6">
-            One digital home for every student. Posts, chat, gossip, games, projects, and more.
+            One digital home for every student. Posts, chat, gossip, projects, and more.
           </p>
 
           <button

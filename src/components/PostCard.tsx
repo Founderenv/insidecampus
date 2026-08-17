@@ -77,12 +77,12 @@ export function PostCard({ post }: PostCardProps) {
     <article className="card p-4 animate-fade-in">
       {/* Author */}
       <div className="flex items-center gap-3 mb-3">
-        <button onClick={() => navigate(`/profile/${post.author?.username}`)}>
+        <button onClick={() => { if (post.author?.username) navigate(`/profile/${post.author.username}`) }}>
           <Avatar src={post.author?.avatar_url} alt={post.author?.full_name || 'Unknown'} size="md" />
         </button>
         <div className="flex-1 min-w-0">
           <button
-            onClick={() => navigate(`/profile/${post.author?.username}`)}
+            onClick={() => { if (post.author?.username) navigate(`/profile/${post.author.username}`) }}
             className="font-semibold text-white text-sm hover:underline truncate block"
           >
             {post.author?.full_name}

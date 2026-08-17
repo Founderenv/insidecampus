@@ -10,6 +10,7 @@ import { Avatar } from '@/components/Avatar'
 import { SkeletonList } from '@/components/Skeleton'
 import { EmptyState, ErrorState } from '@/components/States'
 import { Sheet } from '@/components/Sheet'
+import { ContactSheet } from '@/components/ContactSheet'
 import {
   fetchNearbyPlaces, fetchNearbyPlaceById, createNearbyPlace, deleteNearbyPlace,
   fetchNearbyReviews, fetchNearbyReviewStats, createNearbyReview, deleteNearbyReview,
@@ -331,6 +332,27 @@ function HousingDetailPage({ listingId, user }: { listingId: string; user: any }
           {toggling ? '...' : interested ? 'Interested ✓' : 'Interested'}
         </button>
       )}
+      {user && !isOwner && available && interested && listing.whatsapp_number && (
+        <button onClick={() => setShowContact(true)}
+          className="w-full py-3 rounded-2xl font-semibold text-sm bg-ink-800 border border-zeal-500/40 text-zeal-400 hover:bg-ink-700 transition-all">
+          Contact Host
+        </button>
+      )}
+
+      {/* Contact sheet */}
+      <ContactSheet
+        open={showContact}
+        onClose={() => setShowContact(false)}
+        title={listing.title}
+        ownerId={listing.owner_id}
+        ownerName={listing.owner?.full_name || 'Host'}
+        ownerAvatar={listing.owner?.avatar_url}
+        phone={listing.whatsapp_number || listing.phone_number || null}
+        itemName={listing.title}
+        whatsAppMessage={`Hi, I'm interested in your ${listing.title} listing on InsideZeal. Is it still available?`}
+        requestType="housing"
+        referenceId={listing.id}
+      />
 
       {/* Owner: edit controls */}
       {isOwner && (

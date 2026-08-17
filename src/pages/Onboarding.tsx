@@ -65,15 +65,13 @@ export function Onboarding() {
     return () => clearTimeout(timer)
   }, [username, user?.id])
 
-  if (user && profile?.onboarding_completed) {
-    navigate('/home', { replace: true })
-    return null
-  }
+  useEffect(() => {
+    if (user && profile?.onboarding_completed) navigate('/home', { replace: true })
+    else if (!user) navigate('/login', { replace: true })
+  }, [user, profile?.onboarding_completed, navigate])
 
-  if (!user) {
-    navigate('/login', { replace: true })
-    return null
-  }
+  if (user && profile?.onboarding_completed) return null
+  if (!user) return null
 
   const toggleArray = (arr: string[], val: string, setter: (v: string[]) => void, max?: number) => {
     if (arr.includes(val)) {
@@ -120,11 +118,15 @@ export function Onboarding() {
         year,
         gender,
         instagram: instagram || null,
-        phone: phone || null,
         email_visible: emailVisible,
         onboarding_completed: true,
         updated_at: new Date().toISOString(),
       }).eq('id', user.id)
+
+      await supabase.from('profile_contacts').upsert(
+        { profile_id: user.id, phone: phone || null, updated_at: new Date().toISOString() },
+        { onConflict: 'profile_id' }
+      )
 
       // Save skills
       if (skills.length > 0) {
@@ -230,7 +232,7 @@ export function Onboarding() {
                   <div className="space-y-3">
                     <div>
                       <label className="text-sm text-gray-400 mb-1.5 block">Full Name</label>
-                      <input className="input" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Sahil Dhumal" />
+                      <input className="input" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Your full name" />
                     </div>
                     <div>
                       <label className="text-sm text-gray-400 mb-1.5 block">Username</label>
@@ -249,7 +251,7 @@ export function Onboarding() {
                     </div>
                     <div>
                       <label className="text-sm text-gray-400 mb-1.5 block">Bio (optional)</label>
-                      <textarea className="input min-h-[80px] resize-none" value={bio} onChange={e => setBio(e.target.value)} placeholder="AI builder & campus founder" maxLength={160} />
+                      <textarea className="input min-h-[80px] resize-none" value={bio} onChange={e => setBio(e.target.value)} placeholder="A short bio about yourself" maxLength={160} />
                       <p className="text-xs text-gray-600 mt-1">{bio.length}/160</p>
                     </div>
                   </div>
@@ -363,7 +365,7 @@ export function Onboarding() {
                   <div className="space-y-3">
                     <div>
                       <label className="text-sm text-gray-400 mb-1.5 block">Instagram username (optional)</label>
-                      <input className="input" value={instagram} onChange={e => setInstagram(e.target.value.replace('@', ''))} placeholder="sahil.builds" />
+                      <input className="input" value={instagram} onChange={e => setInstagram(e.target.value.replace('@', ''))} placeholder="yourhandle" />
                     </div>
                     <div>
                       <label className="text-sm text-gray-400 mb-1.5 block">Phone number (optional)</label>

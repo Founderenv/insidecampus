@@ -18,6 +18,7 @@ export function Chat() {
   const [sending, setSending] = useState(false)
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const profileCache = useRef<Map<string, ChatMessage['author']>>(new Map())
 
   useEffect(() => {
     fetchChatRooms().then(r => { setRooms(r); setLoading(false) }).catch(() => setLoading(false))
@@ -36,10 +37,11 @@ export function Chat() {
         filter: `room_id=eq.${activeRoom.id}`,
       }, async (payload) => {
         const raw = payload.new as ChatMessage
-        let author = undefined
-        try {
-          author = (await fetchProfile(raw.author_id)) ?? undefined
-        } catch {}
+        let author = profileCache.current.get(raw.author_id)
+        if (author === undefined && !profileCache.current.has(raw.author_id)) {
+          try { author = (await fetchProfile(raw.author_id)) ?? undefined } catch {}
+          profileCache.current.set(raw.author_id, author)
+        }
         setMessages(prev => [...prev, { ...raw, author }])
       })
       .subscribe()
@@ -69,7 +71,7 @@ export function Chat() {
 
   if (activeRoom) {
     return (
-      <div className="space-y-3 flex flex-col h-[calc(100vh-12rem)] lg:h-[calc(100vh-3rem)]">
+      <div className="space-y-3 flex flex-col h-[calc(100dvh-12rem)] lg:h-[calc(100dvh-3rem)]">
         <div className="flex items-center gap-3 pb-3 border-b border-ink-800">
           <button onClick={() => setActiveRoom(null)} className="text-gray-400 hover:text-white">
             <ArrowLeft className="w-5 h-5" />

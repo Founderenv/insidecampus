@@ -18,6 +18,7 @@ export function Campus() {
   const [sending, setSending] = useState(false)
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const profileCache = useRef<Map<string, ChatMessage['author']>>(new Map())
 
   useEffect(() => {
     if (!user) {
@@ -45,8 +46,11 @@ export function Campus() {
         filter: `room_id=eq.${activeRoom.id}`,
       }, async (payload) => {
         const raw = payload.new as ChatMessage
-        let author = undefined
-        try { author = (await fetchProfile(raw.author_id)) ?? undefined } catch {}
+        let author = profileCache.current.get(raw.author_id)
+        if (author === undefined && !profileCache.current.has(raw.author_id)) {
+          try { author = (await fetchProfile(raw.author_id)) ?? undefined } catch {}
+          profileCache.current.set(raw.author_id, author)
+        }
         setMessages(prev => {
           if (prev.some(m => m.id === raw.id)) return prev
           return [...prev, { ...raw, author }]
@@ -79,7 +83,7 @@ export function Campus() {
 
   if (activeRoom) {
     return (
-      <div className="flex flex-col" style={{ height: 'calc(100vh - 8rem)' }}>
+      <div className="flex flex-col" style={{ height: 'calc(100dvh - 8rem)' }}>
         <div className="flex items-center gap-3 pb-3 border-b border-ink-800 shrink-0">
           <button onClick={() => setActiveRoom(null)} className="text-gray-400 hover:text-white p-1">
             <ArrowLeft className="w-5 h-5" />

@@ -69,16 +69,20 @@ export function Messages() {
         otherUser: p.profiles as Profile,
       }))
 
+      const { data: lastMsgs } = await supabase
+        .from('dm_messages')
+        .select('conversation_id, content, created_at')
+        .in('conversation_id', convIds)
+        .order('created_at', { ascending: false })
+      const lastMap = new Map<string, { content: string; created_at: string }>()
+      for (const m of lastMsgs || []) {
+        if (!lastMap.has(m.conversation_id)) lastMap.set(m.conversation_id, m)
+      }
       for (const c of convos) {
-        const { data: msgs } = await supabase
-          .from('dm_messages')
-          .select('content, created_at')
-          .eq('conversation_id', c.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-        if (msgs && msgs.length > 0) {
-          c.lastMessage = msgs[0].content
-          c.lastTime = msgs[0].created_at
+        const last = lastMap.get(c.id)
+        if (last) {
+          c.lastMessage = last.content
+          c.lastTime = last.created_at
         }
       }
 
@@ -181,7 +185,7 @@ export function Messages() {
                 <div key={msg.id} className={`flex gap-2.5 ${isOwn ? 'flex-row-reverse' : ''}`}>
                   <Avatar
                     src={isOwn ? undefined : activeConvo.otherUser.avatar_url}
-                    alt={isOwn ? (user?.email || '') : activeConvo.otherUser.full_name}
+                    alt={isOwn ? 'You' : activeConvo.otherUser.full_name}
                     size="sm"
                   />
                   <div className={`max-w-[75%] ${isOwn ? 'text-right' : ''}`}>
@@ -233,7 +237,7 @@ export function Messages() {
           icon={<MessageCircle className="w-7 h-7" />}
           title="No conversations yet"
           description="Start a conversation from someone's profile."
-          action={<button onClick={() => navigate('/explore')} className="btn-primary text-sm">Discover students</button>}
+          action={<button onClick={() => navigate('/rankings')} className="btn-primary text-sm">Discover students</button>}
         />
       ) : (
         <div className="space-y-2">

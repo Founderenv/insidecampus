@@ -90,11 +90,10 @@ export function Home() {
     setSearching(true)
     const timer = setTimeout(async () => {
       try {
-        const [core, ev, mp, lf] = await Promise.all([
+        const [core, ev, mp] = await Promise.all([
           searchAll(searchQuery),
           fetchEvents().catch(() => []),
           fetchMarketplace().catch(() => []),
-          fetchLostFound().catch(() => []),
         ])
         const q = searchQuery.toLowerCase()
         setSearchResults({
@@ -133,13 +132,13 @@ export function Home() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-display font-bold text-white">InsideZeal</h1>
         <div className="flex items-center gap-1">
-          <button onClick={() => navigate('/rankings')} className="p-2 rounded-xl hover:bg-ink-800 transition-colors">
+          <button onClick={() => navigate('/rankings')} aria-label="Rankings" className="p-2 rounded-xl hover:bg-ink-800 transition-colors">
             <Trophy className="w-5 h-5 text-gray-400" />
           </button>
-          <button onClick={() => navigate('/notifications')} className="p-2 rounded-xl hover:bg-ink-800 transition-colors">
+          <button onClick={() => navigate('/notifications')} aria-label="Notifications" className="p-2 rounded-xl hover:bg-ink-800 transition-colors">
             <Bell className="w-5 h-5 text-gray-400" />
           </button>
-          <button onClick={() => setMenuOpen(true)} className="p-2 rounded-xl hover:bg-ink-800 transition-colors">
+          <button onClick={() => setMenuOpen(true)} aria-label="Menu" className="p-2 rounded-xl hover:bg-ink-800 transition-colors">
             <Menu className="w-5 h-5 text-gray-400" />
           </button>
         </div>
@@ -170,7 +169,7 @@ export function Home() {
                 <div>
                   <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-2">Students</p>
                   {searchResults.users.map((u: Profile) => (
-                    <button key={u.id} onClick={() => { setSearchQuery(''); navigate(`/profile/${u.username}`) }}
+                    <button key={u.id} onClick={() => { setSearchQuery(''); if (u.username) navigate(`/profile/${u.username}`) }}
                       className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-ink-800 transition-colors text-left">
                       <Avatar src={u.avatar_url} alt={u.full_name} size="sm" />
                       <div className="flex-1 min-w-0">
@@ -386,7 +385,6 @@ export function Home() {
             { label: 'Nearby', path: '/nearby', icon: '📍' },
             { label: 'Projects', path: '/projects', icon: '🚀' },
             { label: 'Clubs', path: '/clubs', icon: '🎯' },
-            { label: 'Builders', path: '/builders', icon: '🔧' },
           ].map(item => (
             <button
               key={item.path}

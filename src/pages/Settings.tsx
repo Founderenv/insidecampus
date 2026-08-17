@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext'
 import { Avatar } from '@/components/Avatar'
 import { HiddenAvatar } from '@/components/HiddenAvatar'
 import { supabase } from '@/lib/supabase'
-import { fetchMyHiddenProfile, createHiddenProfile, fetchBlockedUsers, blockUser } from '@/lib/data'
+import { fetchMyHiddenProfile, createHiddenProfile, fetchBlockedUsers, blockUser, unblockUser } from '@/lib/data'
 import { generateAnonymousCode } from '@/lib/utils'
 import type { HiddenProfile, Profile } from '@/types'
 
@@ -14,7 +14,7 @@ const AVATAR_STYLES = ['1', '2', '3', '4', '5', '6', '7']
 const SETTINGS_WHITELIST = new Set([
   'full_name', 'username', 'bio', 'avatar_url',
   'branch_id', 'year', 'gender', 'show_gender', 'show_year',
-  'instagram', 'phone', 'email_visible', 'is_private', 'show_rankings',
+  'instagram', 'email_visible', 'is_private', 'show_rankings',
 ])
 
 export function Settings() {
@@ -72,6 +72,14 @@ export function Settings() {
   }
 
   if (!profile) return null
+
+  const unblock = async (b: Profile) => {
+    if (!user) return
+    try {
+      await unblockUser(user.id, b.id)
+      setBlocked(prev => prev.filter(x => x.id !== b.id))
+    } catch {}
+  }
 
   return (
     <div className="space-y-5">
@@ -174,7 +182,7 @@ export function Settings() {
               <div key={b.id} className="flex items-center gap-3">
                 <Avatar src={b.avatar_url} alt={b.full_name} size="sm" />
                 <span className="text-sm text-gray-300 flex-1">{b.full_name}</span>
-                <button className="btn-ghost text-xs text-rose-400">Unblock</button>
+                <button onClick={() => unblock(b)} className="btn-ghost text-xs text-rose-400">Unblock</button>
               </div>
             ))}
           </div>
@@ -234,6 +242,9 @@ function ToggleRow({ label, desc, value, onChange }: { label: string; desc: stri
         <p className="text-xs text-gray-500">{desc}</p>
       </div>
       <button
+        role="switch"
+        aria-checked={value}
+        aria-label={label}
         onClick={() => onChange(!value)}
         className={`w-12 h-6 rounded-full transition-colors shrink-0 ${value ? 'bg-zeal-500' : 'bg-ink-600'}`}
       >

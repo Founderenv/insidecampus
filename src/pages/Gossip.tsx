@@ -91,6 +91,7 @@ export function Gossip() {
   const [sending, setSending] = useState(false)
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const profileCache = useRef<Map<string, { full_name: string; avatar_url: string | null; username: string | null } | undefined>>(new Map())
 
   // --- Attachment sheet ---
   const [attachSheet, setAttachSheet] = useState(false)
@@ -158,7 +159,12 @@ export function Gossip() {
       }, async (payload) => {
         const raw = payload.new as ChatMessage
         let author = undefined
-        try { author = (await fetchProfile(raw.author_id)) ?? undefined } catch {}
+        if (!profileCache.current.has(raw.author_id)) {
+          try { author = (await fetchProfile(raw.author_id)) ?? undefined } catch {}
+          profileCache.current.set(raw.author_id, author ? { full_name: author.full_name, avatar_url: author.avatar_url, username: author.username } : undefined)
+        } else {
+          author = profileCache.current.get(raw.author_id)
+        }
         setMessages(prev => {
           if (prev.some(m => m.id === raw.id)) return prev
           return [...prev, {

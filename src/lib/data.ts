@@ -43,7 +43,7 @@ export function sanitizeText(value: string): string {
 const PROFILE_UPDATE_WHITELIST = new Set([
   'full_name', 'username', 'bio', 'avatar_url',
   'branch_id', 'year', 'gender', 'show_gender', 'show_year',
-  'instagram', 'phone', 'email_visible',
+  'instagram', 'email_visible',
   'is_private', 'onboarding_completed', 'show_rankings', 'updated_at',
 ])
 
@@ -550,6 +550,12 @@ export async function fetchTeachers(branchId?: string) {
   return data as Teacher[]
 }
 
+export async function fetchTeacherById(id: string) {
+  const { data, error } = await supabase.from('teachers').select('*').eq('id', id).maybeSingle()
+  if (error) throw error
+  return data as Teacher | null
+}
+
 export async function fetchTeacherReviews(teacherId: string) {
   const { data, error } = await supabase
     .from('teacher_reviews')
@@ -860,6 +866,11 @@ export async function toggleClubJoin(clubId: string, userId: string) {
 export async function fetchClubMemberIds(clubId: string) {
   const { data } = await supabase.from('club_members').select('user_id').eq('club_id', clubId)
   return new Set(data?.map(d => d.user_id) || [])
+}
+
+export async function fetchMyJoinedClubIds(userId: string) {
+  const { data } = await supabase.from('club_members').select('club_id').eq('user_id', userId)
+  return new Set<string>(data?.map(d => d.club_id) || [])
 }
 
 // === Projects ===
@@ -1418,6 +1429,10 @@ export async function blockUser(blockerId: string, blockedId: string) {
   await supabase.from('blocks').insert({ blocker_id: blockerId, blocked_id: blockedId })
 }
 
+export async function unblockUser(blockerId: string, blockedId: string) {
+  await supabase.from('blocks').delete().eq('blocker_id', blockerId).eq('blocked_id', blockedId)
+}
+
 export async function fetchBlockedUsers(userId: string) {
   const { data, error } = await supabase
     .from('blocks')
@@ -1688,7 +1703,18 @@ export async function deleteContactRequest(requestId: string, userId: string) {
 }
 
 export async function fetchListingOwnerPhone(ownerId: string) {
-  const { data, error } = await supabase.from('profiles').select('phone').eq('id', ownerId).maybeSingle()
+  const { data, error } = await supabase.rpc('get_contact_phone', { p_owner_id: ownerId })
+  if (error) throw error
+  return data as string | null
+}
+
+export async function fetchMyContactPhone(userId: string) {
+  const { data, error } = await supabase.from('profile_contacts').select('phone').eq('profile_id', userId).maybeSingle()
   if (error) throw error
   return data?.phone as string | null
+}
+
+export async function updateContactPhone(userId: string, phone: string | null) {
+  const { error } = await supabase.from('profile_contacts').upsert({ profile_id: userId, phone, updated_at: new Date().toISOString() }, { onConflict: 'profile_id' })
+  if (error) throw error
 }

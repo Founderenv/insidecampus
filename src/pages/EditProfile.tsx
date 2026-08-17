@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Camera, Loader2, AlertCircle, Check } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { Avatar } from '@/components/Avatar'
-import { updateProfile, uploadAvatar, checkUsernameAvailability, fetchBranches, sanitizeText } from '@/lib/data'
+import { updateProfile, uploadAvatar, checkUsernameAvailability, fetchBranches, fetchMyContactPhone, updateContactPhone, sanitizeText } from '@/lib/data'
 import type { Branch } from '@/types'
 
 function normalizePhone(raw: string): string | null {
@@ -40,9 +40,9 @@ export function EditProfile() {
       setUsername(profile.username || '')
       setBio(profile.bio || '')
       setInstagram(profile.instagram || '')
-      setPhone(profile.phone || '')
       setYear(profile.year || 1)
       setBranchId(profile.branch_id || '')
+      fetchMyContactPhone(profile.id).then(p => setPhone(p || '')).catch(() => setPhone(''))
     }
     fetchBranches().then(setBranches).catch(() => {})
   }, [profile])
@@ -105,10 +105,10 @@ export function EditProfile() {
         username: username || null,
         bio: sanitizeText(bio),
         instagram: instagram || null,
-        phone: normalizedPhone,
         year,
         branch_id: branchId || null,
       } as any)
+      await updateContactPhone(profile.id, normalizedPhone || null)
       await refreshProfile()
       setSuccess(true)
       setTimeout(() => setSuccess(false), 2000)

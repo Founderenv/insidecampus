@@ -40,6 +40,7 @@ export function ContactSheet({
 
   useEffect(() => {
     if (!open) return
+    let cancelled = false
     setRequestState('idle')
     setRequestError('')
     if (phone !== undefined) {
@@ -48,9 +49,10 @@ export function ContactSheet({
     }
     setPhoneLoading(true)
     fetchListingOwnerPhone(ownerId)
-      .then(p => setResolvedPhone(p))
-      .catch(() => setResolvedPhone(null))
-      .finally(() => setPhoneLoading(false))
+      .then(p => { if (!cancelled) setResolvedPhone(p) })
+      .catch(() => { if (!cancelled) setResolvedPhone(null) })
+      .finally(() => { if (!cancelled) setPhoneLoading(false) })
+    return () => { cancelled = true }
   }, [open, ownerId, phone])
 
   const hasPhone = !!resolvedPhone

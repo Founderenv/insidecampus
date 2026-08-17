@@ -7,7 +7,7 @@ import { SkeletonList } from '@/components/Skeleton'
 import { EmptyState, ErrorState } from '@/components/States'
 import { Sheet } from '@/components/Sheet'
 import {
-  fetchTeachers,
+  fetchTeacherById,
   fetchTeacherReviews,
   createTeacherReview,
   toggleReviewLike,
@@ -52,10 +52,9 @@ export function TeacherDetail() {
     setLoading(true)
     setError(false)
     try {
-      const [teachers, revs] = await Promise.all([fetchTeachers(), fetchTeacherReviews(id)])
-      const t = teachers.find(t => t.id === id)
-      if (!t) { setError(true); return }
-      setTeacher(t)
+      const [teacher, revs] = await Promise.all([fetchTeacherById(id) as any, fetchTeacherReviews(id)])
+      if (!teacher) { setError(true); return }
+      setTeacher(teacher as any)
       setReviews(revs)
       if (user) {
         const ids = await fetchReviewLikeIds(user.id)

@@ -5,6 +5,7 @@ import {
   Instagram, Phone, MessageCircle, X, Image as ImageIcon, Heart, HandHeart,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { supabase } from '@/lib/supabase'
 import { Avatar } from '@/components/Avatar'
 import { SkeletonList } from '@/components/Skeleton'
 import { EmptyState, ErrorState } from '@/components/States'
@@ -108,7 +109,7 @@ function EventDetailPage({ eventId, user }: { eventId: string; user: any }) {
         const v = await applyEventVolunteer(event.id, user.id)
         setIsVolunteer(true)
         if (user) {
-          v.user = { id: user.id, full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Student', avatar_url: user.user_metadata?.avatar_url || null, username: null, bio: '', college_id: null, branch_id: null, year: 0, gender: '', show_gender: false, show_year: false, is_private: false, instagram: null, phone: null, email_visible: false, aura_badges: [], show_rankings: true, zeal_score: 0, smart_score: 0, game_xp: 0, game_level: 0, follower_count: 0, following_count: 0, post_count: 0, onboarding_completed: true, is_admin: false, is_banned: false, created_at: '' }
+          v.user = { id: user.id, full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Student', avatar_url: user.user_metadata?.avatar_url || null, username: null, bio: '', college_id: null, branch_id: null, year: 0, gender: '', show_gender: false, show_year: false, is_private: false, instagram: null, email_visible: false, aura_badges: [], show_rankings: true, zeal_score: 0, smart_score: 0, game_xp: 0, game_level: 0, follower_count: 0, following_count: 0, post_count: 0, onboarding_completed: true, is_admin: false, is_banned: false, created_at: '' }
         }
         setVolunteers(prev => [...prev, v])
       }
@@ -337,11 +338,15 @@ export function Events() {
     try {
       const data = await fetchEvents(f === 'all' ? undefined : f)
       setEvents(data)
-      if (user) {
-        const ids = await Promise.all(data.map(ev => fetchEventAttendeeIds(ev.id)))
-        const merged = new Set<string>()
-        ids.forEach(s => s.forEach(id => merged.add(id)))
-        setAttendingIds(merged)
+      if (user && data.length > 0) {
+        const { data: mine } = await supabase
+          .from('event_attendees')
+          .select('event_id')
+          .eq('user_id', user.id)
+          .in('event_id', data.map(ev => ev.id))
+        setAttendingIds(new Set<string>((mine || []).map(m => m.event_id)))
+      } else {
+        setAttendingIds(new Set())
       }
     } catch {
       setError(true)

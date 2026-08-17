@@ -12,7 +12,6 @@ export interface Profile {
   show_year: boolean
   is_private: boolean
   instagram: string | null
-  phone: string | null
   email_visible: boolean
   aura_badges: string[]
   show_rankings: boolean

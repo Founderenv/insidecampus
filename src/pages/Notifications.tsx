@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, Heart, UserPlus, MessageCircle, Trophy, Gamepad2, Rocket, Calendar, UserCheck } from 'lucide-react'
+import { Bell, Heart, UserPlus, MessageCircle, Trophy, Rocket, Calendar, UserCheck } from 'lucide-react'
 import { Avatar } from '@/components/Avatar'
 import { SkeletonList } from '@/components/Skeleton'
 import { EmptyState } from '@/components/States'
@@ -16,7 +16,6 @@ const iconMap: Record<string, typeof Heart> = {
   follow_request: UserPlus,
   event: Calendar,
   rank: Trophy,
-  game: Gamepad2,
   project_interest: Rocket,
   system: Bell,
 }
@@ -39,7 +38,6 @@ function getNotificationText(n: Notification): string {
     case 'follow_request': return `${name} wants to follow you`
     case 'event': return n.content || `${name} shared an event`
     case 'rank': return n.content || 'Your campus rank updated'
-    case 'game': return n.content || 'New game achievement!'
     case 'project_interest': return `${name} is interested in your project`
     default: return n.content || `${name} did something`
   }

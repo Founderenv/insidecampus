@@ -12,17 +12,16 @@ import { SkeletonProfile, SkeletonList } from '@/components/Skeleton'
 import { EmptyState, ErrorState } from '@/components/States'
 import { Sheet } from '@/components/Sheet'
 import {
-  fetchProfileByUsername, fetchProfilePosts, fetchProfileProjects,
-  fetchProfileAchievements, fetchProfileSkills, fetchSavedPosts,
+  fetchProfileByUsername, fetchProfilePosts, fetchProfileSkills, fetchSavedPosts,
   fetchIsFollowing, followUser, unfollowUser, fetchFollowers,
   fetchFollowing, fetchFollowRequests, acceptFollowRequest,
-  declineFollowRequest, removeFollower, createOrGetConversation,
+  declineFollowRequest, createOrGetConversation,
   blockUser, reportContent, fetchBranches, fetchUserRank,
   fetchMarketplace, fetchResources,
 } from '@/lib/data'
 import { formatNumber, yearLabel } from '@/lib/utils'
 import type { Resource } from '@/lib/data'
-import type { Profile as ProfileType, Post, Project, Achievement, Skill, Branch, MarketplaceListing } from '@/types'
+import type { Profile as ProfileType, Post, Skill, Branch, MarketplaceListing } from '@/types'
 
 type Tab = 'posts' | 'learn' | 'marketplace'
 type ListSheet = 'followers' | 'following' | 'requests' | null
@@ -31,7 +30,6 @@ const RANK_ICONS = { popular: '👑', creator: '🔥' }
 
 const CREATE_OPTIONS = [
   { label: 'Post', icon: '📝', path: '/create', identity: 'real' },
-  { label: 'Learn / Resource', icon: '📚', path: '/resources/new', identity: 'real' },
   { label: 'Marketplace', icon: '🛒', path: '/marketplace', identity: 'real' },
   { label: 'Lost Item', icon: '🔍', path: '/lost-found', identity: 'real' },
   { label: 'Found Item', icon: '✅', path: '/lost-found', identity: 'real' },
@@ -48,8 +46,6 @@ export function Profile() {
   const [error, setError] = useState(false)
   const [tab, setTab] = useState<Tab>('posts')
   const [posts, setPosts] = useState<Post[]>([])
-  const [projects, setProjects] = useState<Project[]>([])
-  const [achievements, setAchievements] = useState<Achievement[]>([])
   const [savedPosts, setSavedPosts] = useState<Post[]>([])
   const [learnItems, setLearnItems] = useState<Resource[]>([])
   const [marketItems, setMarketItems] = useState<MarketplaceListing[]>([])
@@ -91,9 +87,8 @@ export function Profile() {
     const pid = profile.id
     setTabLoading(true)
     Promise.all([
-      fetchProfilePosts(pid), fetchProfileProjects(pid),
-      fetchProfileAchievements(pid), fetchProfileSkills(pid),
-    ]).then(([p, pr, a, s]) => { setPosts(p); setProjects(pr); setAchievements(a); setSkills(s) })
+      fetchProfilePosts(pid), fetchProfileSkills(pid),
+    ]).then(([p, s]) => { setPosts(p); setSkills(s) })
       .catch(() => {}).finally(() => setTabLoading(false))
     if (isOwnProfile) {
       fetchSavedPosts(pid).then(setSavedPosts).catch(() => {})
@@ -137,7 +132,7 @@ export function Profile() {
 
   const handleMessage = async () => {
     if (!user || !profile) return
-    try { const cid = await createOrGetConversation(user.id, profile.id); navigate(`/chat/${cid}`) } catch {}
+    try { await createOrGetConversation(user.id, profile.id); navigate(`/messages?with=${profile.id}`) } catch {}
   }
 
   const openList = async (type: ListSheet) => {

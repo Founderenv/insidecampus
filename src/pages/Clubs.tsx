@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext'
 import { Avatar } from '@/components/Avatar'
 import { SkeletonList } from '@/components/Skeleton'
 import { EmptyState, ErrorState } from '@/components/States'
-import { fetchClubs, toggleClubJoin, fetchClubMemberIds } from '@/lib/data'
+import { fetchClubs, toggleClubJoin, fetchMyJoinedClubIds } from '@/lib/data'
 import { formatNumber } from '@/lib/utils'
 import type { Club } from '@/types'
 
@@ -24,10 +24,7 @@ export function Clubs() {
       .then(async data => {
         setClubs(data)
         if (user) {
-          const ids = await Promise.all(data.map(c => fetchClubMemberIds(c.id)))
-          const merged = new Set<string>()
-          ids.forEach(s => s.forEach(id => merged.add(id)))
-          setJoinedIds(merged)
+          fetchMyJoinedClubIds(user.id).then(setJoinedIds).catch(() => {})
         }
       })
       .catch(() => setError(true))

@@ -73,6 +73,12 @@ export default function Resources() {
   const [programGroups, setProgramGroups] = useState<ProgramGroup[]>([])
   const [activeGroupId, setActiveGroupId] = useState<string>('')
   const [filterOpen, setFilterOpen] = useState(false)
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => clearTimeout(t)
+  }, [search])
 
   useEffect(() => {
     Promise.all([
@@ -87,7 +93,7 @@ export default function Resources() {
       fetchResources({
         type: activeType !== 'all' ? activeType : undefined,
         branchId: activeBranch || undefined,
-        search: search || undefined,
+        search: debouncedSearch || undefined,
       }),
       user ? fetchResourceUsefulIds(user.id) : Promise.resolve(new Set<string>()),
       user ? fetchResourceSaveIds(user.id) : Promise.resolve(new Set<string>()),
@@ -96,7 +102,7 @@ export default function Resources() {
       setUsefulSet(u)
       setSavedSet(s)
     }).finally(() => setLoading(false))
-  }, [user, activeType, activeBranch, search])
+  }, [user, activeType, activeBranch, debouncedSearch])
 
   const handleUseful = async (r: Resource) => {
     if (!user) return

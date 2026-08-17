@@ -6,7 +6,6 @@ import { useAuth } from '@/context/AuthContext'
 import {
   fetchMyHiddenProfile,
   findMatch,
-  fetchMyMatches,
   sendHiddenMessage,
   fetchHiddenMessages,
   requestReveal,
@@ -21,7 +20,6 @@ import type { HiddenProfile } from '@/types'
 const intentions = [
   { id: 'friends', label: 'Friendship', icon: '🤝' },
   { id: 'study', label: 'Study Buddy', icon: '📚' },
-  { id: 'gaming', label: 'Gaming', icon: '🎮' },
   { id: 'random', label: 'Random Chat', icon: '🎲' },
   { id: 'networking', label: 'Networking', icon: '💼' },
   { id: 'meet', label: 'Meet Someone', icon: '💕' },
@@ -97,6 +95,7 @@ export function Match() {
     setMatchResult(null)
     setRevealStatus('none')
     setChatOpen(false)
+    setFinding(true)
     await handleFindMatch()
   }
 

@@ -14,6 +14,8 @@ const sizeMap = {
   xl: 'w-20 h-20 text-2xl',
 }
 
+const pixelMap: Record<string, number> = { xs: 28, sm: 36, md: 44, lg: 56, xl: 80 }
+
 export function Avatar({ src, alt, size = 'md', className = '', ring = false }: AvatarProps) {
   const initials = alt
     .split(' ')
@@ -29,6 +31,10 @@ export function Avatar({ src, alt, size = 'md', className = '', ring = false }: 
       <img
         src={src}
         alt={alt}
+        width={pixelMap[size]}
+        height={pixelMap[size]}
+        loading="lazy"
+        decoding="async"
         className={`${sizeMap[size]} ${ringClass} rounded-full object-cover ${className}`}
       />
     )
