@@ -358,7 +358,7 @@ export async function fetchIsFollowing(followerId: string, followeeId: string) {
 
 export async function followUser(followerId: string, followeeId: string, isPrivate: boolean) {
   if (isPrivate) {
-    await supabase.from('follow_requests').insert({ sender_id: followerId, receiver_id: followeeId })
+    await supabase.from('follows').insert({ follower_id: followerId, followee_id: followeeId, status: 'pending' })
     return 'requested'
   } else {
     await supabase.from('follows').insert({ follower_id: followerId, followee_id: followeeId, status: 'accepted' })
@@ -529,8 +529,10 @@ export async function createConfession(hiddenProfileId: string, content: string,
 export async function toggleConfessionLike(confessionId: string, userId: string, isLiked: boolean) {
   if (isLiked) {
     await supabase.from('confession_likes').delete().eq('confession_id', confessionId).eq('user_id', userId)
+    await supabase.rpc('increment_confession_likes', { confession_id_input: confessionId, delta: -1 })
   } else {
     await supabase.from('confession_likes').insert({ confession_id: confessionId, user_id: userId })
+    await supabase.rpc('increment_confession_likes', { confession_id_input: confessionId, delta: 1 })
   }
 }
 
@@ -667,7 +669,7 @@ export async function findMatch(hiddenProfileId: string, intention: string) {
   matchedIds.delete(hiddenProfileId)
 
   let query = supabase
-    .from('hidden_profiles')
+    .from('safe_hidden_profiles')
     .select('id, anonymous_code, avatar_seed, avatar_style, nickname, gender, show_gender')
     .neq('id', hiddenProfileId)
   if (matchedIds.size > 0) {
