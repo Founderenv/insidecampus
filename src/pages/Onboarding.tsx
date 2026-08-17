@@ -242,7 +242,7 @@ export function Onboarding() {
                           className="input pl-8"
                           value={username}
                           onChange={e => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase())}
-                          placeholder="sahil"
+                          placeholder="your_username"
                         />
                         {usernameStatus === 'checking' && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-500">checking...</span>}
                         {usernameStatus === 'available' && <Check className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zeal-500" />}

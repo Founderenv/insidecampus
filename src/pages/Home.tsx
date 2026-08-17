@@ -130,7 +130,10 @@ export function Home() {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+        <img src="/insidezeal-z-logo.png" alt="" className="w-7 h-7 object-contain shrink-0" />
         <h1 className="text-xl font-display font-bold text-white">InsideZeal</h1>
+      </div>
         <div className="flex items-center gap-1">
           <button onClick={() => navigate('/rankings')} aria-label="Rankings" className="p-2 rounded-xl hover:bg-ink-800 transition-colors">
             <Trophy className="w-5 h-5 text-gray-400" />
