@@ -120,7 +120,12 @@ export default function App() {
       <Route path="/welcome" element={loading || !authInitialized ? <LoadingScreen /> : user ? <Navigate to="/home" replace /> : <Welcome />} />
       <Route path="/login" element={user ? <Navigate to="/home" replace /> : <Login />} />
       <Route path="/onboarding" element={<Onboarding />} />
-      <Route path="/" element={loading || !authInitialized ? <LoadingScreen /> : error ? <AuthErrorScreen /> : user ? <ProtectedRoutes /> : <Navigate to="/welcome" replace />} />
+      <Route path="/" element={
+        loading || !authInitialized ? <LoadingScreen />
+        : error ? <AuthErrorScreen />
+        : user ? <Navigate to="/home" replace />
+        : <Welcome />
+      } />
       <Route path="/*" element={loading || !authInitialized ? <LoadingScreen /> : error ? <AuthErrorScreen /> : <ProtectedRoutes />} />
     </Routes>
   )
