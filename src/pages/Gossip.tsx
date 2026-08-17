@@ -81,7 +81,7 @@ function extFromMime(mime: string): string {
 /* ------------------------------------------------------------------ */
 
 export function Gossip() {
-  const { user, profile } = useAuth()
+  const { user } = useAuth()
 
   // --- Room state ---
   const [rooms, setRooms] = useState<ChatRoom[]>([])
@@ -129,13 +129,11 @@ export function Gossip() {
   const [audioProgress, setAudioProgress] = useState(0)
   const [audioDuration, setAudioDuration] = useState(0)
 
-  const deptName = profile?.branch_id ? 'Computer Engineering' : 'My Department'
-
   /* ---- Load rooms ---- */
   useEffect(() => {
     if (!user) { setLoading(false); return }
     fetchGossipRooms(user.id).then(r => { if (r.length > 0) setRooms(r) }).catch(() => {}).finally(() => setLoading(false))
-  }, [user, deptName])
+  }, [user])
 
   /* ---- Load messages + realtime ---- */
   useEffect(() => {

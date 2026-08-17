@@ -108,7 +108,7 @@ function EventDetailPage({ eventId, user }: { eventId: string; user: any }) {
         const v = await applyEventVolunteer(event.id, user.id)
         setIsVolunteer(true)
         if (user) {
-          v.user = { id: user.id, full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Student', avatar_url: user.user_metadata?.avatar_url || null, username: null, bio: '', college_id: null, branch_id: null, year: 0, gender: '', show_gender: false, show_year: false, is_private: false, instagram: null, phone: null, email_visible: false, aura_badges: [], zeal_score: 0, smart_score: 0, game_xp: 0, game_level: 0, follower_count: 0, following_count: 0, post_count: 0, onboarding_completed: true, is_admin: false, is_banned: false, created_at: '' }
+          v.user = { id: user.id, full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Student', avatar_url: user.user_metadata?.avatar_url || null, username: null, bio: '', college_id: null, branch_id: null, year: 0, gender: '', show_gender: false, show_year: false, is_private: false, instagram: null, phone: null, email_visible: false, aura_badges: [], show_rankings: true, zeal_score: 0, smart_score: 0, game_xp: 0, game_level: 0, follower_count: 0, following_count: 0, post_count: 0, onboarding_completed: true, is_admin: false, is_banned: false, created_at: '' }
         }
         setVolunteers(prev => [...prev, v])
       }

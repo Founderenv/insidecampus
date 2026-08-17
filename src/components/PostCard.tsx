@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Flame, Check } from 'lucide-react'
+import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Flame, Check, Trash2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Avatar } from '@/components/Avatar'
 import { timeAgo, formatNumber } from '@/lib/utils'
-import { toggleLike, toggleSave } from '@/lib/data'
+import { toggleLike, toggleSave, deletePost } from '@/lib/data'
 import { useAuth } from '@/context/AuthContext'
 import { useNavigate } from 'react-router-dom'
+import { Sheet } from '@/components/Sheet'
 import type { Post } from '@/types'
 
 interface PostCardProps {
@@ -20,6 +21,11 @@ export function PostCard({ post }: PostCardProps) {
   const [likeCount, setLikeCount] = useState(post.like_count)
   const [likeAnim, setLikeAnim] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [deleted, setDeleted] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  const isOwner = user?.id === post.author_id
 
   const handleLike = async () => {
     if (!user) return
@@ -53,6 +59,20 @@ export function PostCard({ post }: PostCardProps) {
     }
   }
 
+  const handleDelete = async () => {
+    if (!user || !isOwner) return
+    setDeleting(true)
+    try {
+      await deletePost(post.id, user.id)
+      setMenuOpen(false)
+      setDeleted(true)
+    } catch {} finally {
+      setDeleting(false)
+    }
+  }
+
+  if (deleted) return null
+
   return (
     <article className="card p-4 animate-fade-in">
       {/* Author */}
@@ -73,9 +93,12 @@ export function PostCard({ post }: PostCardProps) {
             <span>{timeAgo(post.created_at)}</span>
           </div>
         </div>
-        <button className="text-gray-500 hover:text-white p-1">
-          <MoreHorizontal className="w-5 h-5" />
-        </button>
+        {isOwner && (
+          <button onClick={() => setMenuOpen(true)} className="text-gray-500 hover:text-white p-1">
+            <MoreHorizontal className="w-5 h-5" />
+          </button>
+        )}
+        {!isOwner && <span className="w-6" />}
       </div>
 
       {/* Content */}
@@ -158,6 +181,18 @@ export function PostCard({ post }: PostCardProps) {
           <span>{formatNumber(post.view_count)} views</span>
         </div>
       )}
+
+      {/* Owner menu */}
+      <Sheet open={menuOpen} onClose={() => setMenuOpen(false)} title="Post Options">
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-rose-400 hover:bg-rose-500/10 transition-colors text-left disabled:opacity-50"
+        >
+          <Trash2 className="w-4 h-4" />
+          {deleting ? 'Deleting...' : 'Delete post'}
+        </button>
+      </Sheet>
     </article>
   )
 }

@@ -15,6 +15,7 @@ export interface Profile {
   phone: string | null
   email_visible: boolean
   aura_badges: string[]
+  show_rankings: boolean
   zeal_score: number
   smart_score: number
   game_xp: number
@@ -33,6 +34,15 @@ export interface Branch {
   name: string
   short_name: string
   college_id: string | null
+  program_group_id: string | null
+  display_order: number
+  is_active: boolean
+}
+
+export interface ProgramGroup {
+  id: string
+  name: string
+  short_name: string
   display_order: number
   is_active: boolean
 }

@@ -27,15 +27,10 @@ import type { Profile as ProfileType, Post, Project, Achievement, Skill, Branch,
 type Tab = 'posts' | 'learn' | 'marketplace'
 type ListSheet = 'followers' | 'following' | 'requests' | null
 
-const RANK_ICONS = { popular: '👑', smart: '🧠', gamer: '🎮', creator: '🔥' }
-const AURA_EMOJIS: Record<string, string> = {
-  creative: '🎨', leader: '👑', techie: '💻', gamer: '🎮', social: '🤝',
-  sporty: '⚽', nerd: '🧠', vibes: '✨', mystic: '🔮',
-}
+const RANK_ICONS = { popular: '👑', creator: '🔥' }
 
 const CREATE_OPTIONS = [
   { label: 'Post', icon: '📝', path: '/create', identity: 'real' },
-  { label: 'Confession', icon: '🤫', path: '/confessions', identity: 'hidden', createType: 'confession' },
   { label: 'Learn / Resource', icon: '📚', path: '/resources/new', identity: 'real' },
   { label: 'Marketplace', icon: '🛒', path: '/marketplace', identity: 'real' },
   { label: 'Lost Item', icon: '🔍', path: '/lost-found', identity: 'real' },
@@ -71,7 +66,7 @@ export function Profile() {
   const [reportSubmitting, setReportSubmitting] = useState(false)
   const [blockConfirm, setBlockConfirm] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [ranks, setRanks] = useState<Record<string, number>>({ popular: 0, smart: 0, gamer: 0, creator: 0 })
+  const [ranks, setRanks] = useState<Record<string, number>>({ popular: 0, creator: 0 })
   const [createMenuOpen, setCreateMenuOpen] = useState(false)
 
   const isOwnProfile = !username || username === 'me' || (me && username === me.username)
@@ -123,9 +118,8 @@ export function Profile() {
     if (!profile) return
     const uid = profile.id
     Promise.all([
-      fetchUserRank(uid, 'popular'), fetchUserRank(uid, 'smart'),
-      fetchUserRank(uid, 'gamer'), fetchUserRank(uid, 'creator'),
-    ]).then(([p, s, g, c]) => setRanks({ popular: p, smart: s, gamer: g, creator: c })).catch(() => {})
+      fetchUserRank(uid, 'popular'), fetchUserRank(uid, 'creator'),
+    ]).then(([p, c]) => setRanks({ popular: p, creator: c })).catch(() => {})
   }, [profile])
 
   const handleFollow = async () => {
@@ -280,30 +274,36 @@ export function Profile() {
         </div>
       )}
 
-      {/* Aura Badges */}
-      {(profile.aura_badges || []).length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {(profile.aura_badges || []).slice(0, 3).map(badge => (
-            <span key={badge} className="chip chip-active text-xs gap-1">
-              <span>{AURA_EMOJIS[badge.toLowerCase()] || '✨'}</span> {badge}
-            </span>
-          ))}
+      {/* Rankings */}
+      {profile.show_rankings && (
+        <div className="card p-4">
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(RANK_ICONS).map(([type, emoji]) => (
+              <button key={type} onClick={() => navigate('/rankings')}
+                className="flex flex-col items-center gap-0.5 p-2 rounded-xl hover:bg-ink-800 transition-colors">
+                <span className="text-base">{emoji}</span>
+                <span className="text-[10px] font-medium text-gray-400 capitalize">{type}</span>
+                <span className="text-xs font-bold text-zeal-400">#{ranks[type] > 0 ? ranks[type] : '—'}</span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Live Rankings */}
-      <div className="card p-4">
-        <div className="grid grid-cols-4 gap-2">
-          {Object.entries(RANK_ICONS).map(([type, emoji]) => (
-            <button key={type} onClick={() => navigate('/rankings')}
-              className="flex flex-col items-center gap-0.5 p-2 rounded-xl hover:bg-ink-800 transition-colors">
-              <span className="text-base">{emoji}</span>
-              <span className="text-[10px] font-medium text-gray-400 capitalize">{type}</span>
-              <span className="text-xs font-bold text-zeal-400">#{ranks[type] || '—'}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Anonymous Identity (own profile) */}
+      {isOwnProfile && (
+        <button
+          onClick={() => navigate('/anon')}
+          className="w-full card p-4 flex items-center gap-3 hover:bg-ink-800 transition-colors text-left"
+        >
+          <div className="w-11 h-11 rounded-2xl bg-ink-800 flex items-center justify-center text-xl shrink-0">🎭</div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-white">Anonymous ID</p>
+            <p className="text-xs text-gray-500">Hidden identity, confessions & Zeal Match</p>
+          </div>
+          <ExternalLink className="w-4 h-4 text-gray-600" />
+        </button>
+      )}
 
       {/* Profile Tabs */}
       <div className="flex gap-1 border-b border-ink-800">

@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Heart, MessageCircle, Share2, Bookmark, Send, Flame, Loader2, AlertCircle, Check } from 'lucide-react'
+import { ArrowLeft, Heart, MessageCircle, Share2, Bookmark, Send, Flame, Loader2, AlertCircle, Check, Trash2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
 import { Avatar } from '@/components/Avatar'
@@ -9,7 +9,7 @@ import { ErrorState } from '@/components/States'
 import {
   fetchPostById, fetchComments, createComment,
   toggleLike, toggleSave, fetchLikedPostIds, fetchSavedPostIds,
-  sanitizeText, validateInput, incrementPostViews,
+  sanitizeText, validateInput, incrementPostViews, deletePost,
 } from '@/lib/data'
 import { timeAgo, formatNumber } from '@/lib/utils'
 import type { Post, Comment } from '@/types'
@@ -226,6 +226,20 @@ export function PostDetail() {
           >
             <Bookmark className={`w-5 h-5 transition-colors ${saved ? 'fill-zeal-500 text-zeal-500' : ''}`} />
           </button>
+          {user?.id === post.author_id && (
+            <button
+              onClick={async () => {
+                if (!confirm('Delete this post?')) return
+                try {
+                  await deletePost(post.id, user.id)
+                  navigate(-1)
+                } catch {}
+              }}
+              className="p-2 rounded-lg hover:bg-ink-800 transition-colors"
+            >
+              <Trash2 className="w-5 h-5 text-rose-400" />
+            </button>
+          )}
         </div>
 
         {post.view_count > 0 && (

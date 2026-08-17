@@ -16,6 +16,7 @@ export const DEMO_PROFILE: Profile = {
   instagram: null,
   phone: null,
   email_visible: false,
+  show_rankings: true,
   aura_badges: ['Tech Builder', 'Problem Solver', 'Campus Creator'],
   zeal_score: 420,
   smart_score: 85,
@@ -42,6 +43,7 @@ export const DEMO_BRANCH = {
   name: 'Computer Engineering',
   short_name: 'Computer',
   college_id: null,
+  program_group_id: null,
   display_order: 1,
   is_active: true,
 }

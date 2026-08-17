@@ -55,9 +55,9 @@ export function Create() {
         setUploading(true)
         const url = await uploadPostImage(user.id, imageFile)
         setUploading(false)
-        await createPostWithMedia(user.id, sanitized, url)
+        await createPostWithMedia(user.id, sanitized, url, 'image', profile?.branch_id || undefined)
       } else {
-        await createPost(user.id, sanitized)
+        await createPost(user.id, sanitized, 'text', profile?.branch_id || undefined)
       }
       navigate('/home', { replace: true })
     } catch (err: any) {
@@ -84,7 +84,7 @@ export function Create() {
     setPosting(true)
     setError('')
     try {
-      await createPollPost(user.id, sanitized, validOptions)
+      await createPollPost(user.id, sanitized, validOptions, profile?.branch_id || undefined)
       navigate('/home', { replace: true })
     } catch (err: any) {
       setError(err?.message || 'Failed to create poll.')

@@ -9,6 +9,7 @@ import { Onboarding } from '@/pages/Onboarding'
 import { Home } from '@/pages/Home'
 import { Campus } from '@/pages/Campus'
 import { Profile } from '@/pages/Profile'
+import { Anonymous } from '@/pages/Anonymous'
 import { Settings } from '@/pages/Settings'
 import { Gossip } from '@/pages/Gossip'
 import { Confessions } from '@/pages/Confessions'
@@ -57,9 +58,9 @@ function AuthErrorScreen() {
 }
 
 function ProtectedRoutes() {
-  const { user, profile, loading, error } = useAuth()
+  const { user, profile, loading, authInitialized, error } = useAuth()
 
-  if (loading) return <LoadingScreen />
+  if (loading || !authInitialized) return <LoadingScreen />
   if (error) return <AuthErrorScreen />
   if (!user) return <Navigate to="/login" replace />
   if (profile && !profile.onboarding_completed) return <Navigate to="/onboarding" replace />
@@ -104,6 +105,7 @@ function ProtectedRoutes() {
               <Route path="/resources-learn" element={<Resources />} />
               <Route path="/profile/:username" element={<Profile />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/anon" element={<Anonymous />} />
               <Route path="/" element={<Navigate to="/home" replace />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
@@ -116,13 +118,13 @@ function ProtectedRoutes() {
 }
 
 export default function App() {
-  const { loading, error } = useAuth()
+  const { loading, authInitialized, error } = useAuth()
 
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/onboarding" element={<Onboarding />} />
-      <Route path="/*" element={loading ? <LoadingScreen /> : error ? <AuthErrorScreen /> : <ProtectedRoutes />} />
+      <Route path="/*" element={loading || !authInitialized ? <LoadingScreen /> : error ? <AuthErrorScreen /> : <ProtectedRoutes />} />
     </Routes>
   )
 }

@@ -1,11 +1,11 @@
-import { Home, Flame, BookOpen, Heart, User } from 'lucide-react'
+import { Home, Flame, BookOpen, MessageCircle, User } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 
 const items = [
   { icon: Home, label: 'Home', path: '/home' },
   { icon: Flame, label: 'Gossip', path: '/gossip' },
   { icon: BookOpen, label: 'Learn', path: '/resources-learn' },
-  { icon: Heart, label: 'Chat', path: '/match' },
+  { icon: MessageCircle, label: 'Messages', path: '/messages' },
   { icon: User, label: 'Profile', path: '/profile' },
 ]
 

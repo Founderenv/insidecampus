@@ -8,6 +8,7 @@ interface AuthContextValue {
   user: User | null
   profile: Profile | null
   loading: boolean
+  authInitialized: boolean
   error: string | null
   signInWithGoogle: () => Promise<void>
   signOut: () => Promise<void>
@@ -22,6 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [authInitialized, setAuthInitialized] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const profileLoadingRef = useRef<string | null>(null)
 
@@ -84,10 +86,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const retry = useCallback(() => {
     setError(null)
     setLoading(true)
+    setAuthInitialized(false)
     profileLoadingRef.current = null
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
+      setAuthInitialized(true)
       if (session?.user) {
         loadProfile(session.user.id, session.user.user_metadata as Record<string, unknown>)
           .finally(() => setLoading(false))
@@ -95,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false)
       }
     }).catch(() => {
+      setAuthInitialized(true)
       setLoading(false)
     })
   }, [loadProfile])
@@ -107,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!mounted) return
       setSession(session)
       setUser(session?.user ?? null)
+      setAuthInitialized(true)
       if (session?.user) {
         loadProfile(session.user.id, session.user.user_metadata as Record<string, unknown>)
           .finally(() => {
@@ -121,12 +127,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }).catch(() => {
       if (mounted) {
+        setAuthInitialized(true)
         setLoading(false)
         initialLoadDone = true
       }
     })
 
+    // Ignore the INITIAL_SESSION event: it fires with a null session while
+    // getSession() is still resolving, which briefly flashed the login page.
+    // The initial session is set by getSession() above.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'INITIAL_SESSION' && !initialLoadDone) return
       setSession(session)
       setUser(session?.user ?? null)
 
@@ -172,7 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, loading, error, signInWithGoogle, signOut, refreshProfile, retry }}>
+    <AuthContext.Provider value={{ session, user, profile, loading, authInitialized, error, signInWithGoogle, signOut, refreshProfile, retry }}>
       {children}
     </AuthContext.Provider>
   )

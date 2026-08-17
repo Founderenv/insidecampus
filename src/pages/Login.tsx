@@ -4,14 +4,14 @@ import { useAuth } from '@/context/AuthContext'
 import { Logo } from '@/components/Logo'
 
 export function Login() {
-  const { user, profile, signInWithGoogle, loading } = useAuth()
+  const { user, profile, signInWithGoogle, loading, authInitialized } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (loading) return
+    if (loading || !authInitialized) return
     if (user && profile?.onboarding_completed) navigate('/home', { replace: true })
     else if (user && !profile?.onboarding_completed) navigate('/onboarding', { replace: true })
-  }, [user, profile, loading, navigate])
+  }, [user, profile, loading, authInitialized, navigate])
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-ink-950 relative overflow-hidden">

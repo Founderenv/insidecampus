@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import type { Profile, Branch, Post, GossipPost, Confession, Teacher, EventItem, Club, Project, Achievement, MarketplaceListing, LostFoundItem, Builder, ChatRoom, ChatMessage, Notification, TeamRequest, Skill, Interest, HiddenProfile, TeacherReview, EventVolunteer, EventCommunityMessage, EventResource, NearbyPlace, NearbyReview, HousingListing, HousingListingImage, ContactRequest } from '@/types'
+import type { Profile, Branch, ProgramGroup, Post, GossipPost, Confession, Teacher, EventItem, Club, Project, Achievement, MarketplaceListing, LostFoundItem, Builder, ChatRoom, ChatMessage, Notification, TeamRequest, Skill, Interest, HiddenProfile, TeacherReview, EventVolunteer, EventCommunityMessage, EventResource, NearbyPlace, NearbyReview, HousingListing, HousingListingImage, ContactRequest } from '@/types'
 
 // ========================================
 // INPUT VALIDATION
@@ -44,7 +44,7 @@ const PROFILE_UPDATE_WHITELIST = new Set([
   'full_name', 'username', 'bio', 'avatar_url',
   'branch_id', 'year', 'gender', 'show_gender', 'show_year',
   'instagram', 'phone', 'email_visible',
-  'is_private', 'onboarding_completed', 'updated_at',
+  'is_private', 'onboarding_completed', 'show_rankings', 'updated_at',
 ])
 
 function filterProfileUpdates(updates: Record<string, unknown>): Record<string, unknown> {
@@ -91,6 +91,12 @@ export async function fetchBranches() {
   const { data, error } = await supabase.from('branches').select('*').eq('is_active', true).order('display_order')
   if (error) throw error
   return data as Branch[]
+}
+
+export async function fetchProgramGroups() {
+  const { data, error } = await supabase.from('program_groups').select('*').eq('is_active', true).order('display_order')
+  if (error) throw error
+  return data as ProgramGroup[]
 }
 
 export async function fetchSkills() {
@@ -187,6 +193,15 @@ export async function fetchPostById(postId: string) {
   return data as Post | null
 }
 
+export async function deletePost(postId: string, authorId: string) {
+  const { error } = await supabase
+    .from('posts')
+    .update({ is_hidden: true })
+    .eq('id', postId)
+    .eq('author_id', authorId)
+  if (error) throw error
+}
+
 export async function incrementPostViews(postId: string) {
   await supabase.rpc('increment_post_views', { post_id_input: postId })
 }
@@ -233,10 +248,10 @@ export async function createPost(authorId: string, content: string, postType = '
   return data
 }
 
-export async function createPostWithMedia(authorId: string, content: string, mediaUrl: string, postType = 'image') {
+export async function createPostWithMedia(authorId: string, content: string, mediaUrl: string, postType = 'image', branchId?: string) {
   const { data: post, error: postError } = await supabase
     .from('posts')
-    .insert({ author_id: authorId, content, post_type: postType })
+    .insert({ author_id: authorId, content, post_type: postType, branch_id: branchId })
     .select()
     .maybeSingle()
   if (postError) throw postError
@@ -247,10 +262,10 @@ export async function createPostWithMedia(authorId: string, content: string, med
   return post
 }
 
-export async function createPollPost(authorId: string, content: string, options: string[]) {
+export async function createPollPost(authorId: string, content: string, options: string[], branchId?: string) {
   const { data: post, error: postError } = await supabase
     .from('posts')
-    .insert({ author_id: authorId, content, post_type: 'poll' })
+    .insert({ author_id: authorId, content, post_type: 'poll', branch_id: branchId })
     .select()
     .maybeSingle()
   if (postError) throw postError
@@ -1333,55 +1348,29 @@ export function formatDuration(ms: number): string {
 
 // === Gossip Chat Rooms ===
 export async function fetchGossipRooms(userId: string): Promise<ChatRoom[]> {
-  // Try to get gossip-specific rooms (slug starts with 'gossip-')
-  const { data: gossipRooms } = await supabase
+  // Gossip shows two rooms: Campus (everyone) + the user's own branch room.
+  const rooms: ChatRoom[] = []
+  const { data: campus } = await supabase
     .from('chat_rooms')
     .select('*')
     .eq('is_active', true)
-    .like('slug', 'gossip-%')
-    .order('name')
+    .eq('slug', 'campus')
+    .limit(1)
+  if (campus && campus.length > 0) rooms.push(campus[0] as ChatRoom)
 
-  if (gossipRooms && gossipRooms.length >= 2) return gossipRooms as ChatRoom[]
-
-  // Fallback: use general chat rooms with campus/everyone slugs
-  const { data: fallback } = await supabase
-    .from('chat_rooms')
-    .select('*')
-    .eq('is_active', true)
-    .in('slug', ['campus', 'everyone', 'gossip-campus'])
-    .order('name')
-
-  return (fallback || []) as ChatRoom[]
-}
-
-// Demo messages for preview mode Gossip
-export interface DemoChatMessage {
-  id: string
-  author_id: string
-  content: string
-  created_at: string
-  author?: { full_name: string; avatar_url: string | null; username: string | null }
-}
-
-const DEMO_GOSSIP_MESSAGES: Record<string, DemoChatMessage[]> = {
-  campus: [
-    { id: 'demo-g1', author_id: 'u1', content: 'Welcome to InsideZeal Campus! 🎉', created_at: new Date(Date.now() - 3600000).toISOString(), author: { full_name: 'Priya Sharma', avatar_url: null, username: 'priya_s' } },
-    { id: 'demo-g2', author_id: 'u2', content: 'Hey everyone! Excited to be here.', created_at: new Date(Date.now() - 3000000).toISOString(), author: { full_name: 'Arjun Patel', avatar_url: null, username: 'arjun_p' } },
-    { id: 'demo-g3', author_id: 'u3', content: 'Anybody here from the Robotics club?', created_at: new Date(Date.now() - 2400000).toISOString(), author: { full_name: 'Sneha Reddy', avatar_url: null, username: 'sneha_r' } },
-    { id: 'demo-g4', author_id: 'u4', content: 'The campus fest planning meeting is tomorrow at 4pm 📅', created_at: new Date(Date.now() - 1800000).toISOString(), author: { full_name: 'Vikram Singh', avatar_url: null, username: 'vikram_s' } },
-    { id: 'demo-g5', author_id: 'u5', content: 'Just shared some notes for Data Structures in the Learn section 📚', created_at: new Date(Date.now() - 900000).toISOString(), author: { full_name: 'Ananya Gupta', avatar_url: null, username: 'ananya_g' } },
-  ],
-  department: [
-    { id: 'demo-d1', author_id: 'u6', content: 'Computer Engineering students — who\'s taking the DSA elective next sem?', created_at: new Date(Date.now() - 3600000).toISOString(), author: { full_name: 'Rohan Mehta', avatar_url: null, username: 'rohan_m' } },
-    { id: 'demo-d2', author_id: 'u7', content: 'I am! Professor Kumar\'s section right?', created_at: new Date(Date.now() - 3000000).toISOString(), author: { full_name: 'Kavya Nair', avatar_url: null, username: 'kavya_n' } },
-    { id: 'demo-d3', author_id: 'u8', content: 'Yes! His assignments are tough but you learn a lot 💪', created_at: new Date(Date.now() - 2400000).toISOString(), author: { full_name: 'Aditya Joshi', avatar_url: null, username: 'aditya_j' } },
-    { id: 'demo-d4', author_id: 'u9', content: 'Can someone share the lab manual for OS?', created_at: new Date(Date.now() - 1800000).toISOString(), author: { full_name: 'Nisha Verma', avatar_url: null, username: 'nisha_v' } },
-  ],
-}
-
-export function getDemoGossipMessages(roomSlug: string): DemoChatMessage[] {
-  if (roomSlug.includes('campus')) return DEMO_GOSSIP_MESSAGES.campus
-  return DEMO_GOSSIP_MESSAGES.department
+  if (userId) {
+    const { data: me } = await supabase.from('profiles').select('branch_id').eq('id', userId).maybeSingle()
+    if (me?.branch_id) {
+      const { data: branchRoom } = await supabase
+        .from('chat_rooms')
+        .select('*')
+        .eq('is_active', true)
+        .eq('branch_id', me.branch_id)
+        .limit(1)
+      if (branchRoom && branchRoom.length > 0) rooms.push(branchRoom[0] as ChatRoom)
+    }
+  }
+  return rooms
 }
 
 // === Team Requests ===

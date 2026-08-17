@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Search, SlidersHorizontal, X, BookOpen } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { fetchResources, toggleResourceUseful, fetchResourceUsefulIds, fetchResourceSaveIds, toggleResourceSave, fetchBranches } from '@/lib/data'
+import { fetchResources, toggleResourceUseful, fetchResourceUsefulIds, fetchResourceSaveIds, toggleResourceSave, fetchBranches, fetchProgramGroups } from '@/lib/data'
 import { Sheet } from '@/components/Sheet'
 import type { Resource } from '@/lib/data'
-import type { Branch } from '@/types'
+import type { Branch, ProgramGroup } from '@/types'
 
 const DEPARTMENT_LABELS: Record<string, string> = {
   'AI & Data Science': 'AI & Data Science',
@@ -70,10 +70,15 @@ export default function Resources() {
   const [usefulSet, setUsefulSet] = useState<Set<string>>(new Set())
   const [savedSet, setSavedSet] = useState<Set<string>>(new Set())
   const [dbBranches, setDbBranches] = useState<Branch[]>([])
+  const [programGroups, setProgramGroups] = useState<ProgramGroup[]>([])
+  const [activeGroupId, setActiveGroupId] = useState<string>('')
   const [filterOpen, setFilterOpen] = useState(false)
 
   useEffect(() => {
-    fetchBranches().then(setDbBranches).catch(() => {})
+    Promise.all([
+      fetchBranches().then(setDbBranches).catch(() => {}),
+      fetchProgramGroups().then(setProgramGroups).catch(() => {}),
+    ])
   }, [])
 
   useEffect(() => {
@@ -112,7 +117,11 @@ export default function Resources() {
     ? resources.filter(r => r.semester === activeSemester)
     : resources
 
-  const activeFilterCount = (activeBranch ? 1 : 0) + (activeSemester > 0 ? 1 : 0)
+  const visibleBranches = activeGroupId
+    ? dbBranches.filter(b => b.program_group_id === activeGroupId)
+    : dbBranches
+
+  const activeFilterCount = (activeBranch ? 1 : 0) + (activeSemester > 0 ? 1 : 0) + (activeGroupId ? 1 : 0)
 
   return (
     <div className="space-y-4">
@@ -226,6 +235,30 @@ export default function Resources() {
       {/* Filter Sheet */}
       <Sheet open={filterOpen} onClose={() => setFilterOpen(false)} title="Filters">
         <div className="space-y-5">
+          {/* Program Group */}
+          {programGroups.length > 0 && (
+            <div>
+              <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-2">Program</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => { setActiveGroupId(''); setActiveBranch('') }}
+                  className={`chip text-xs ${!activeGroupId ? 'chip-active' : ''}`}
+                >
+                  All Programs
+                </button>
+                {programGroups.map(g => (
+                  <button
+                    key={g.id}
+                    onClick={() => { setActiveGroupId(g.id); setActiveBranch('') }}
+                    className={`chip text-xs ${activeGroupId === g.id ? 'chip-active' : ''}`}
+                  >
+                    {g.short_name || g.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Department */}
           <div>
             <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-2">Department</p>
@@ -236,7 +269,7 @@ export default function Resources() {
               >
                 All Departments
               </button>
-              {dbBranches.map(b => (
+              {visibleBranches.map(b => (
                 <button
                   key={b.id}
                   onClick={() => setActiveBranch(b.id)}

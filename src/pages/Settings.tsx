@@ -14,7 +14,7 @@ const AVATAR_STYLES = ['1', '2', '3', '4', '5', '6', '7']
 const SETTINGS_WHITELIST = new Set([
   'full_name', 'username', 'bio', 'avatar_url',
   'branch_id', 'year', 'gender', 'show_gender', 'show_year',
-  'instagram', 'phone', 'email_visible', 'is_private',
+  'instagram', 'phone', 'email_visible', 'is_private', 'show_rankings',
 ])
 
 export function Settings() {
@@ -129,6 +129,12 @@ export function Settings() {
             desc="Allow others to see your email"
             value={profile.email_visible}
             onChange={(v) => updateProfileField('email_visible', v)}
+          />
+          <ToggleRow
+            label="Show rankings"
+            desc="Display your rank badges on your profile"
+            value={profile.show_rankings}
+            onChange={(v) => updateProfileField('show_rankings', v)}
           />
         </div>
       </div>

@@ -56,7 +56,6 @@ export function Home() {
   const [error, setError] = useState(false)
   const [activeTab, setActiveTab] = useState<HomeTab>('feed')
   const [branches, setBranches] = useState<Branch[]>([])
-  const [activeBranch, setActiveBranch] = useState<string | null>('campus') // 'campus' | dept id
   const [topRankers, setTopRankers] = useState<{ profile: Profile; category: string; emoji: string; rank: number }[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any>(null)
@@ -121,11 +120,12 @@ export function Home() {
 
   useEffect(() => { loadTabData(activeTab) }, [activeTab, loadTabData])
 
-  const filteredPosts = activeBranch === 'campus'
-    ? posts
-    : activeBranch
-      ? posts.filter(p => p.branch_id === activeBranch)
-      : posts
+  const myBranch = profile?.branch_id ? branches.find(b => b.id === profile.branch_id) : null
+
+  // Feed shows your own branch by default; without a branch assigned, show everything.
+  const filteredPosts = profile?.branch_id
+    ? posts.filter(p => p.branch_id === profile.branch_id)
+    : posts
 
   return (
     <div className="space-y-4">
@@ -216,23 +216,12 @@ export function Home() {
         </div>
       )}
 
-      {/* Department Chips */}
-      {!searchQuery && (
+      {/* Branch Chip */}
+      {!searchQuery && myBranch && (
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 lg:mx-0 lg:px-0 scrollbar-none">
-          <button
-            onClick={() => setActiveBranch('campus')}
-            className={`chip shrink-0 ${activeBranch === 'campus' ? 'chip-active' : ''}`}
-          >
-            Campus
-          </button>
-          {profile?.branch_id && (
-            <button
-              onClick={() => setActiveBranch(profile.branch_id)}
-              className={`chip shrink-0 ${activeBranch === profile.branch_id ? 'chip-active' : ''}`}
-            >
-              {branches.find(b => b.id === profile.branch_id)?.short_name || 'My Department'}
-            </button>
-          )}
+          <span className="chip chip-active shrink-0">
+            {myBranch.short_name || myBranch.name}
+          </span>
         </div>
       )}
 
@@ -284,7 +273,8 @@ export function Home() {
           {activeTab === 'feed' && (
             loading ? <SkeletonList count={4} /> : error ? <ErrorState onRetry={() => window.location.reload()} /> :
             filteredPosts.length === 0 ? (
-              <EmptyState icon={<Flame className="w-7 h-7" />} title="No posts yet" description="Be the first to post on InsideZeal." />
+              <EmptyState icon={<Flame className="w-7 h-7" />} title="No posts yet"
+                description={profile?.branch_id ? 'No posts in your branch yet. Be the first to post.' : 'Be the first to post on InsideZeal.'} />
             ) : (
               <div className="space-y-3">
                 {filteredPosts.map(p => <PostCard key={p.id} post={p} />)}
@@ -410,9 +400,9 @@ export function Home() {
           <div className="border-t border-ink-700 my-2" />
           <button
             onClick={() => { setMenuOpen(false); navigate('/settings') }}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors text-left"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-ink-800 hover:text-white transition-colors text-left"
           >
-            <span>🚪</span> Logout
+            <span>⚙️</span> Settings
           </button>
         </div>
       </Sheet>

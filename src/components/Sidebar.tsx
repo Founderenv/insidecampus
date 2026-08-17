@@ -1,4 +1,4 @@
-import { Home, Flame, BookOpen, Heart, User, LayoutGrid, MapPin, LogOut } from 'lucide-react'
+import { Home, Flame, BookOpen, MessageCircle, User, LayoutGrid, MapPin, LogOut } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Logo } from '@/components/Logo'
 import { useAuth } from '@/context/AuthContext'
@@ -8,7 +8,7 @@ const primaryItems = [
   { icon: Home, label: 'Home', path: '/home' },
   { icon: Flame, label: 'Gossip', path: '/gossip' },
   { icon: BookOpen, label: 'Learn', path: '/resources-learn' },
-  { icon: Heart, label: 'Chat', path: '/match' },
+  { icon: MessageCircle, label: 'Messages', path: '/messages' },
   { icon: User, label: 'Profile', path: '/profile/me' },
 ]
 

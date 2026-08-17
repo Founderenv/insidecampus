@@ -4,24 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Check, ArrowRight, ArrowLeft, Sparkles, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { supabase } from '@/lib/supabase'
-import { fetchBranches, checkUsernameAvailability, createHiddenProfile } from '@/lib/data'
+import { fetchBranches, checkUsernameAvailability, createHiddenProfile, fetchProgramGroups } from '@/lib/data'
 import { generateAnonymousCode } from '@/lib/utils'
 import { Logo } from '@/components/Logo'
 import { HiddenAvatar } from '@/components/HiddenAvatar'
-import type { Branch } from '@/types'
+import type { Branch, ProgramGroup } from '@/types'
 
 const TOTAL_STEPS = 7
-
-const AURA_OPTIONS = [
-  { id: '💻 Tech Builder', label: 'Tech Builder' },
-  { id: '🧠 Problem Solver', label: 'Problem Solver' },
-  { id: '🎮 Competitive Gamer', label: 'Competitive Gamer' },
-  { id: '🚀 Founder', label: 'Founder' },
-  { id: '🔥 Campus Creator', label: 'Campus Creator' },
-  { id: '📸 Creative', label: 'Creative' },
-  { id: '🤝 Community Helper', label: 'Community Helper' },
-  { id: '🎤 Speaker', label: 'Speaker' },
-]
 
 const INTEREST_OPTIONS = ['AI', 'Coding', 'Gaming', 'Football', 'Cricket', 'Music', 'Photography', 'Startups', 'Design', 'Movies', 'Fitness', 'Reading', 'Dance', 'Anime']
 const SKILL_OPTIONS = ['Python', 'Java', 'C++', 'React', 'UI/UX', 'Video Editing', 'Graphic Design', 'Public Speaking', 'JavaScript', 'Node.js', 'Machine Learning', 'Flutter', 'Photography', 'Content Writing']
@@ -47,17 +36,20 @@ export function Onboarding() {
   const [emailVisible, setEmailVisible] = useState(false)
   const [interests, setInterests] = useState<string[]>([])
   const [skills, setSkills] = useState<string[]>([])
-  const [auraBadges, setAuraBadges] = useState<string[]>([])
   const [createHidden, setCreateHidden] = useState(true)
   const [hiddenNickname, setHiddenNickname] = useState('')
   const [hiddenAvatarStyle, setHiddenAvatarStyle] = useState('1')
   const [hiddenGender, setHiddenGender] = useState('prefer_not_to_say')
 
   const [branches, setBranches] = useState<Branch[]>([])
+  const [programGroups, setProgramGroups] = useState<ProgramGroup[]>([])
+  const [programGroupId, setProgramGroupId] = useState<string | null>(null)
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
 
   useEffect(() => {
-    fetchBranches().then(setBranches).catch(() => {})
+    Promise.all([fetchBranches(), fetchProgramGroups()])
+      .then(([b, g]) => { setBranches(b); setProgramGroups(g) })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -130,7 +122,6 @@ export function Onboarding() {
         instagram: instagram || null,
         phone: phone || null,
         email_visible: emailVisible,
-        aura_badges: auraBadges,
         onboarding_completed: true,
         updated_at: new Date().toISOString(),
       }).eq('id', user.id)
@@ -219,11 +210,11 @@ export function Onboarding() {
                     </div>
                     <div className="flex items-center gap-3">
                       <Sparkles className="w-5 h-5 text-zeal-500" />
-                      <span className="text-sm text-gray-300">Post, chat, and compete on leaderboards</span>
+                      <span className="text-sm text-gray-300">Post, chat, and share with your branch</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <Sparkles className="w-5 h-5 text-zeal-500" />
-                      <span className="text-sm text-gray-300">Build your Smart Score and campus identity</span>
+                      <span className="text-sm text-gray-300">Learn from notes and resources</span>
                     </div>
                   </div>
                 </div>
@@ -270,27 +261,47 @@ export function Onboarding() {
                 <div className="space-y-5">
                   <div>
                     <h2 className="text-2xl font-display font-bold text-white mb-1">College details</h2>
-                    <p className="text-gray-500 text-sm">Tell us about your branch and year.</p>
+                    <p className="text-gray-500 text-sm">Tell us about your course and year.</p>
                   </div>
                   <div className="space-y-3">
                     <div>
-                      <label className="text-sm text-gray-400 mb-1.5 block">Branch / Department</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {branches.map(b => (
+                      <label className="text-sm text-gray-400 mb-1.5 block">Program</label>
+                      <div className="grid grid-cols-1 gap-2">
+                        {programGroups.map(g => (
                           <button
-                            key={b.id}
-                            onClick={() => setBranchId(b.id)}
+                            key={g.id}
+                            onClick={() => { setProgramGroupId(g.id); setBranchId(null) }}
                             className={`px-4 py-3 rounded-xl border text-sm font-medium transition-all text-left ${
-                              branchId === b.id
+                              programGroupId === g.id
                                 ? 'bg-zeal-500/15 border-zeal-500/40 text-zeal-400'
                                 : 'bg-ink-800 border-ink-700 text-gray-300 hover:border-ink-600'
                             }`}
                           >
-                            {b.name}
+                            {g.name}
                           </button>
                         ))}
                       </div>
                     </div>
+                    {programGroupId && (
+                      <div>
+                        <label className="text-sm text-gray-400 mb-1.5 block">Branch / Department</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {branches.filter(b => b.program_group_id === programGroupId).map(b => (
+                            <button
+                              key={b.id}
+                              onClick={() => setBranchId(b.id)}
+                              className={`px-4 py-3 rounded-xl border text-sm font-medium transition-all text-left ${
+                                branchId === b.id
+                                  ? 'bg-zeal-500/15 border-zeal-500/40 text-zeal-400'
+                                  : 'bg-ink-800 border-ink-700 text-gray-300 hover:border-ink-600'
+                              }`}
+                            >
+                              {b.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div>
                       <label className="text-sm text-gray-400 mb-1.5 block">Current Year</label>
                       <div className="flex gap-2">
@@ -405,20 +416,6 @@ export function Onboarding() {
                           className={`chip ${skills.includes(s) ? 'chip-active' : ''}`}
                         >
                           {s}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-400 mb-2 block">Profile Aura (pick up to 3)</label>
-                    <div className="flex flex-wrap gap-2">
-                      {AURA_OPTIONS.map(a => (
-                        <button
-                          key={a.id}
-                          onClick={() => toggleArray(auraBadges, a.id, setAuraBadges, 3)}
-                          className={`chip ${auraBadges.includes(a.id) ? 'chip-active' : ''}`}
-                        >
-                          {a.id}
                         </button>
                       ))}
                     </div>
