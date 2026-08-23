@@ -52,6 +52,7 @@ export function Profile() {
   const [skills, setSkills] = useState<Skill[]>([])
   const [followStatus, setFollowStatus] = useState<'none' | 'following' | 'requested'>('none')
   const [followLoading, setFollowLoading] = useState(false)
+  const [messageLoading, setMessageLoading] = useState(false)
   const [tabLoading, setTabLoading] = useState(false)
   const [listSheet, setListSheet] = useState<ListSheet>(null)
   const [listItems, setListItems] = useState<ProfileType[]>([])
@@ -131,8 +132,16 @@ export function Profile() {
   }
 
   const handleMessage = async () => {
-    if (!user || !profile) return
-    try { await createOrGetConversation(user.id, profile.id); navigate(`/messages?with=${profile.id}`) } catch {}
+    if (!user || !profile || messageLoading) return
+    setMessageLoading(true)
+    try {
+      await createOrGetConversation(profile.id)
+      navigate(`/messages?with=${profile.id}`)
+    } catch (error) {
+      console.error('Unable to start a direct conversation.', error)
+    } finally {
+      setMessageLoading(false)
+    }
   }
 
   const openList = async (type: ListSheet) => {
@@ -232,7 +241,7 @@ export function Profile() {
                 className={`${followStatus !== 'none' ? 'btn-secondary' : 'btn-primary'} text-sm flex-1`}>
                 {followStatus === 'following' ? 'Following' : followStatus === 'requested' ? 'Requested' : profile.is_private ? 'Request Follow' : 'Follow'}
               </button>
-              <button onClick={handleMessage} className="btn-secondary text-sm flex items-center gap-2">
+              <button onClick={handleMessage} disabled={messageLoading} className="btn-secondary text-sm flex items-center gap-2">
                 <MessageCircle className="w-4 h-4" /> Message
               </button>
               <button onClick={() => setMoreMenu('report')} className="btn-ghost text-sm p-2.5">

@@ -618,24 +618,15 @@ export async function fetchReviewLikeIds(userId: string) {
 }
 
 // === DMs ===
-export async function createOrGetConversation(userId1: string, userId2: string) {
-  // Check if conversation already exists
-  const { data: myParts } = await supabase.from('dm_participants').select('conversation_id').eq('user_id', userId1)
-  if (myParts && myParts.length > 0) {
-    const convIds = myParts.map(p => p.conversation_id)
-    const { data: otherParts } = await supabase.from('dm_participants').select('conversation_id').in('conversation_id', convIds).eq('user_id', userId2)
-    if (otherParts && otherParts.length > 0) {
-      return otherParts[0].conversation_id as string
-    }
-  }
-  // Create new conversation
-  const { data: conv, error: convError } = await supabase.from('dm_conversations').insert({}).select().maybeSingle()
-  if (convError) throw convError
-  await supabase.from('dm_participants').insert([
-    { conversation_id: conv.id, user_id: userId1 },
-    { conversation_id: conv.id, user_id: userId2 },
-  ])
-  return conv.id as string
+export async function createOrGetConversation(recipientId: string): Promise<string> {
+  // This must run in the database: RLS only lets a user insert their own
+  // participant row, while creating a DM requires adding both participants.
+  const { data, error } = await supabase.rpc('get_or_create_dm_conversation', {
+    recipient_id: recipientId,
+  })
+  if (error) throw error
+  if (!data) throw new Error('The conversation could not be created.')
+  return data as string
 }
 
 export async function sendDmMessage(conversationId: string, senderId: string, content: string) {

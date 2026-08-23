@@ -20,7 +20,7 @@ interface Conversation {
 export function Messages() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchParams] = useSearchParams()
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -29,7 +29,8 @@ export function Messages() {
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const withParamHandled = useRef(false)
+  const withParamHandled = useRef<string | null>(null)
+  const recipientId = searchParams.get('with')
 
   useEffect(() => {
     if (!user) return
@@ -37,13 +38,10 @@ export function Messages() {
   }, [user])
 
   useEffect(() => {
-    if (!user || withParamHandled.current) return
-    const withId = searchParams.get('with')
-    if (!withId) return
-    withParamHandled.current = true
-    setSearchParams({}, { replace: true })
-    setTimeout(() => startNewConversation(withId), 150)
-  }, [user, searchParams])
+    if (!user || !recipientId || withParamHandled.current === recipientId) return
+    withParamHandled.current = recipientId
+    void startNewConversation(recipientId)
+  }, [user, recipientId])
 
   const loadConversations = async () => {
     if (!user) return
@@ -147,12 +145,15 @@ export function Messages() {
   const startNewConversation = async (userId: string) => {
     if (!user) return
     try {
-      const convoId = await createOrGetConversation(user.id, userId)
+      const convoId = await createOrGetConversation(userId)
       const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle()
       if (profile) {
         setActiveConvo({ id: convoId, otherUser: profile as Profile })
       }
-    } catch {}
+      await loadConversations()
+    } catch (error) {
+      console.error('Unable to open a direct conversation.', error)
+    }
   }
 
   const filtered = conversations.filter(c =>
