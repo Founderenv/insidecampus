@@ -629,20 +629,20 @@ export async function createOrGetConversation(recipientId: string): Promise<stri
   return data as string
 }
 
-export async function sendDmMessage(conversationId: string, senderId: string, content: string) {
-  const { data, error } = await supabase
-    .from('dm_messages')
-    .insert({ conversation_id: conversationId, sender_id: senderId, content })
-    .select('*, sender:profiles!dm_messages_sender_id_fkey(*)')
-    .maybeSingle()
+export async function sendDmMessage(conversationId: string, content: string) {
+  const { data, error } = await supabase.rpc('send_dm_message', {
+    target_conversation_id: conversationId,
+    message_content: content,
+  })
   if (error) throw error
+  if (!data) throw new Error('The message could not be sent.')
   return data
 }
 
 export async function fetchDmMessages(conversationId: string, limit = 50) {
   const { data, error } = await supabase
     .from('dm_messages')
-    .select('*, sender:profiles!dm_messages_sender_id_fkey(*)')
+    .select('*')
     .eq('conversation_id', conversationId)
     .order('created_at', { ascending: false })
     .limit(limit)

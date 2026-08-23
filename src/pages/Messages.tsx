@@ -28,6 +28,7 @@ export function Messages() {
   const [messages, setMessages] = useState<any[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
+  const [sendError, setSendError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const withParamHandled = useRef<string | null>(null)
   const recipientId = searchParams.get('with')
@@ -127,11 +128,15 @@ export function Messages() {
     if (!input.trim() || !user || !activeConvo) return
     setSending(true)
     const content = input.trim()
-    setInput('')
+    setSendError(null)
     try {
-      await sendDmMessage(activeConvo.id, user.id, content)
-    } catch {
-      setInput(content)
+      const message = await sendDmMessage(activeConvo.id, content)
+      setMessages(prev => prev.some(m => m.id === message.id) ? prev : [...prev, message])
+      setInput('')
+      await loadConversations()
+    } catch (error) {
+      console.error('Unable to send a direct message.', error)
+      setSendError('Message could not be sent. Please try again.')
     } finally {
       setSending(false)
     }
@@ -202,6 +207,7 @@ export function Messages() {
           <div ref={messagesEndRef} />
         </div>
 
+        {sendError && <p role="alert" className="text-xs text-red-400">{sendError}</p>}
         <div className="flex gap-2 items-center pt-3 border-t border-ink-800">
           <input
             className="input flex-1"
@@ -211,7 +217,7 @@ export function Messages() {
             onKeyDown={e => e.key === 'Enter' && handleSend()}
             disabled={sending}
           />
-          <button onClick={handleSend} disabled={!input.trim() || sending} className="btn-primary p-3 min-w-[44px] min-h-[44px]">
+          <button type="button" onClick={handleSend} disabled={!input.trim() || sending} className="btn-primary p-3 min-w-[44px] min-h-[44px]" aria-label="Send message">
             <Send className="w-4 h-4" />
           </button>
         </div>
